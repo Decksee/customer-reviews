@@ -748,6 +748,12 @@ const EmployeeCard = ({
           className="text-yellow-500 dark:text-yellow-400"
         />
         <div className="flex-1">
+          <select className="border border-[#1c7b80]/50 w-full text-base min-h-[40px] mb-[5px] resize-none focus:border-blue-400 focus:ring-blue-400 transition-all duration-200 rounded-lg touch-manipulation text-gray-800 dark:text-white" id="">
+            <option value="">J’ai trouvé les produits</option>
+            <option value="">Bon accueil</option>
+            <option value="">J’ai trouvé les produits</option>
+            <option value="">J’ai trouvé les produits</option>
+          </select>
           <Textarea
             placeholder="Commentaire (optionnel)"
             className="border border-[#1c7b80]/50 w-full text-base min-h-[60px] resize-none focus:border-blue-400 focus:ring-blue-400 transition-all duration-200 rounded-lg touch-manipulation text-gray-800 dark:text-white"

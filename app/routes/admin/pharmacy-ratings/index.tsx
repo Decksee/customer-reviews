@@ -3,40 +3,40 @@ import { useState, useEffect } from "react";
 import { data } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart } from "@/components/ui/chart";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from "@/components/ui/tabs";
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
 } from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Star, TrendingUp, TrendingDown, Calendar, FilterIcon } from "lucide-react";
 import { feedbackSessionService } from "~/services/feedback-session.service.server";
 import { authService } from "~/services/auth.service.server";
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "Note Pharmacies - Pharmacy Val d'Oise" },
     { name: "description", content: "Rating history and trends for Pharmacy Val d'Oise" },
@@ -46,12 +46,14 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   // Ensure user is authenticated
   await authService.requireUser(request);
-  
+
   const url = new URL(request.url);
   const timeFilter = url.searchParams.get("timeFilter") || "all";
   const ratingFilter = url.searchParams.get("ratingFilter") || "all";
   const page = parseInt(url.searchParams.get("page") || "1");
-  
+  const startDate = url.searchParams.get("startDate");
+  const endDate = url.searchParams.get("endDate");
+
   // Get pharmacy ratings data from feedback sessions
   const { ratings, stats, total } = await feedbackSessionService.getPharmacyRatings(
     timeFilter,
@@ -59,13 +61,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     10,
     ratingFilter
   );
-  
+
   // Get real chart data based on the time filter
   const chartData = await feedbackSessionService.getPharmacyRatingTrends(timeFilter);
-  
-  return data({ 
-    ratings, 
-    stats, 
+
+  return data({
+    ratings,
+    stats,
     chartData,
     total,
     timeFilter,
@@ -75,7 +77,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps) {
-  const { 
+  const {
     ratings,
     stats,
     chartData,
@@ -84,14 +86,17 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     ratingFilter: initialRatingFilter,
     currentPage: initialPage
   } = loaderData;
-  
+
   // Global time period filter
   const [timeFilter, setTimeFilter] = useState(initialTimeFilter);
   const [ratingFilter, setRatingFilter] = useState(initialRatingFilter);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [activeTab, setActiveTab] = useState("charts");
   const [isMobile, setIsMobile] = useState(false);
-  
+
+  const [customDateRange, setCustomDateRange] = useState<{ start: string, end: string } | null>(null);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+
   // Check for mobile viewport on client-side only
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -101,21 +106,26 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
       return () => window.removeEventListener('resize', checkIfMobile);
     }
   }, []);
-  
+
   const itemsPerPage = 10;
   const totalPages = Math.ceil(total / itemsPerPage);
-  
+
   // Handlers for filter changes
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
-    window.location.href = `/admin/pharmacy-ratings?timeFilter=${value}&ratingFilter=${ratingFilter}&page=1`;
+    if (value === "custom" && customDateRange?.start && customDateRange?.end) {
+      window.location.href = `/admin/pharmacy-ratings?timeFilter=custom&startDate=${customDateRange.start}&endDate=${customDateRange.end}&ratingFilter=${ratingFilter}&page=1`;
+    } else if (value !== "custom") {
+      window.location.href = `/admin/pharmacy-ratings?timeFilter=${value}&ratingFilter=${ratingFilter}&page=1`;
+    }
   };
-  
+
+
   const handleRatingFilterChange = (value: string) => {
     setRatingFilter(value);
     window.location.href = `/admin/pharmacy-ratings?timeFilter=${timeFilter}&ratingFilter=${value}&page=1`;
   };
-  
+
   // Handle pagination
   const handlePageChange = (page: number) => {
     window.location.href = `/admin/pharmacy-ratings?timeFilter=${timeFilter}&ratingFilter=${ratingFilter}&page=${page}`;
@@ -145,7 +155,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     { value: "year", label: "Cette année" },
     { value: "lastYear", label: "L'année dernière" }
   ];
-  
+
   // Create chart options with SSR-compatible font size
   const getChartOptions = (options = {}) => {
     return {
@@ -174,12 +184,12 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
             Historique et tendances des évaluations clients de la pharmacie
           </p>
         </div>
-        
+
         {/* Global time filter */}
         <div className="flex items-center space-x-2">
           <FilterIcon className="h-4 w-4 text-muted-foreground" />
-          <Select 
-            value={timeFilter} 
+          <Select
+            value={timeFilter}
             onValueChange={handleTimeFilterChange}
           >
             <SelectTrigger className="w-full sm:w-[220px]">
@@ -191,8 +201,24 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                   {option.label}
                 </SelectItem>
               ))}
+              <SelectItem value="custom">Période personnalisée</SelectItem>
             </SelectContent>
           </Select>
+
+          {timeFilter === "custom" && (
+            <div className="flex gap-2">
+              <input
+                type="date"
+                className="px-3 py-2 border rounded-md text-sm"
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value, end: prev?.end || '' }))}
+              />
+              <input
+                type="date"
+                className="px-3 py-2 border rounded-md text-sm"
+                onChange={(e) => setCustomDateRange(prev => ({ start: prev?.start || '', end: e.target.value }))}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -274,7 +300,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
           <TabsTrigger value="reviews" className="text-xs sm:text-sm">Avis</TabsTrigger>
           <TabsTrigger value="distribution" className="text-xs sm:text-sm">Distribution</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="charts" className="space-y-4">
           <Card>
             <CardHeader className="p-4 sm:p-6">
@@ -288,7 +314,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
               </div>
             </CardHeader>
             <CardContent className="h-60 sm:h-80 p-2 sm:p-6">
-              <LineChart 
+              <LineChart
                 data={chartData}
                 options={getChartOptions({
                   scales: {
@@ -311,15 +337,15 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
         <TabsContent value="reviews" className="space-y-4">
           <Card>
             <CardHeader className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+              {/* <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
                 <div>
                   <CardTitle className="text-base sm:text-lg">Avis Récents</CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
                     Les derniers retours clients
                   </CardDescription>
                 </div>
-                <Select 
-                  value={ratingFilter} 
+                <Select
+                  value={ratingFilter}
                   onValueChange={handleRatingFilterChange}
                 >
                   <SelectTrigger className="w-full sm:w-[180px]">
@@ -327,6 +353,8 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes les notes</SelectItem>
+                    <SelectItem value="positive">Avis positifs</SelectItem>
+                    <SelectItem value="negative">Avis négatifs</SelectItem>
                     <SelectItem value="5">5 étoiles</SelectItem>
                     <SelectItem value="4">4 étoiles</SelectItem>
                     <SelectItem value="3">3 étoiles</SelectItem>
@@ -334,6 +362,46 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                     <SelectItem value="1">1 étoile</SelectItem>
                   </SelectContent>
                 </Select>
+              </div> */}
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Avis Récents</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Les derniers retours clients
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Select
+                  // value={sentimentFilter}
+                  // onValueChange={handleSentimentFilterChange}
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Type d'avis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les avis</SelectItem>
+                      <SelectItem value="positive">Avis positifs (4-5★)</SelectItem>
+                      <SelectItem value="negative">Avis négatifs (1-3★)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={ratingFilter}
+                    onValueChange={handleRatingFilterChange}
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Filtrer par note" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les notes</SelectItem>
+                      <SelectItem value="5">5 étoiles</SelectItem>
+                      <SelectItem value="4">4 étoiles</SelectItem>
+                      <SelectItem value="3">3 étoiles</SelectItem>
+                      <SelectItem value="2">2 étoiles</SelectItem>
+                      <SelectItem value="1">1 étoile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0 sm:p-2">
@@ -357,11 +425,10 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
-                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
-                                    i < rating.rating
-                                      ? "text-yellow-500 fill-yellow-500"
-                                      : "text-gray-300"
-                                  }`}
+                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${i < rating.rating
+                                    ? "text-yellow-500 fill-yellow-500"
+                                    : "text-gray-300"
+                                    }`}
                                 />
                               ))}
                             </div>
@@ -396,24 +463,24 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
+                        <PaginationPrevious
                           onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                           className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
                         />
                       </PaginationItem>
-                      
+
                       {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
                         let pageNumber = i + 1;
-                        
+
                         // Adjust page numbers if we're near the end
                         if (totalPages > 5 && currentPage > 3) {
                           const offset = Math.min(totalPages - 5, currentPage - 3);
                           pageNumber += offset;
                         }
-                        
+
                         // Don't render pages beyond the total
                         if (pageNumber > totalPages) return null;
-                        
+
                         return (
                           <PaginationItem key={i}>
                             <PaginationLink
@@ -425,9 +492,9 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                           </PaginationItem>
                         );
                       })}
-                      
+
                       <PaginationItem>
-                        <PaginationNext 
+                        <PaginationNext
                           onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                           className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
                         />
@@ -453,7 +520,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                 {[5, 4, 3, 2, 1].map(rating => {
                   const count = stats.ratingsDistribution?.[rating] || 0;
                   const percentage = calculatePercentage(count);
-                  
+
                   return (
                     <div key={rating} className="space-y-1">
                       <div className="flex items-center justify-between">
@@ -463,11 +530,10 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className={`h-3 w-3 sm:h-4 sm:w-4 ${
-                                  i < rating
-                                    ? "text-yellow-500 fill-yellow-500"
-                                    : "text-gray-300"
-                                }`}
+                                className={`h-3 w-3 sm:h-4 sm:w-4 ${i < rating
+                                  ? "text-yellow-500 fill-yellow-500"
+                                  : "text-gray-300"
+                                  }`}
                               />
                             ))}
                           </div>
@@ -477,7 +543,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                         </span>
                       </div>
                       <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-yellow-500 rounded-full"
                           style={{ width: `${percentage}%` }}
                         />

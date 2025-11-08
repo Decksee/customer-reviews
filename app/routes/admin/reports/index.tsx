@@ -4,20 +4,20 @@ import { useState } from "react";
 import { data, useLoaderData, useNavigate, Form, useActionData, useSubmit } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import {
   Dialog,
@@ -30,8 +30,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { 
-  Download, 
+import {
+  Download,
   FileText,
   Calendar,
   Loader2,
@@ -46,7 +46,7 @@ import { settingsService } from "~/services/settings.service.server";
 import { userService } from "~/services/user.service.server";
 import { authService } from "~/services/auth.service.server";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "Rapports - Pharmacy Val d'Oise" },
     { name: "description", content: "Télécharger et générer des rapports pour Pharmacy Val d'Oise" },
@@ -77,10 +77,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   // Ensure user is authenticated and is admin
   const user = await authService.requireUser(request);
   const userId = user?.id || (user as any)?._id?.toString();
-  
+
   // Get recent reports
   const recentReports = await reportService.getRecentReports(5);
-  
+
   // Format recent reports for display
   const formattedRecentReports = recentReports.map(report => ({
     id: report._id?.toString() || '',
@@ -92,10 +92,10 @@ export async function loader({ request }: Route.LoaderArgs) {
     downloaded: report.downloadCount,
     filePath: report.filePath
   }));
-  
+
   // Get available report types
   const availableReportTypes = reportService.getAvailableReportTypes();
-  
+
   // Get employees for employee selection
   const employees = await userService.getAllEmployees();
   const formattedEmployees = employees.map(employee => ({
@@ -103,21 +103,21 @@ export async function loader({ request }: Route.LoaderArgs) {
     name: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Sans nom',
     position: (employee.position as any)?.title || employee.currentPosition || 'Employé'
   }));
-  
+
   // Get application settings
   const settings = await settingsService.getSettings(userId);
-  
+
   // Get scheduled tasks info
   const scheduledTasks = schedulerService.getTasksInfo();
 
   // Get last generated report from session or URL params
   const url = new URL(request.url);
-  const lastGeneratedReport = url.searchParams.get('lastReport') ? 
+  const lastGeneratedReport = url.searchParams.get('lastReport') ?
     JSON.parse(decodeURIComponent(url.searchParams.get('lastReport') || '{}')) : null;
 
-  return data({ 
-    recentReports: formattedRecentReports, 
-    availableReportTypes, 
+  return data({
+    recentReports: formattedRecentReports,
+    availableReportTypes,
     employees: formattedEmployees,
     settings: {
       autoGenerateMonthlyReport: settings.autoGenerateMonthlyReport,
@@ -134,18 +134,18 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionDataT
   if (!user) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  
+
   const userId = user?.id || (user as any)?._id?.toString() || '';
-  
+
   const formData = await request.formData();
   const action = formData.get('action') as string;
-  
+
   if (action === 'generate-report') {
     const reportType = formData.get('type') as string;
     const reportFormat = formData.get('format') as 'PDF' | 'EXCEL';
     const periodType = formData.get('period') as string;
     let dateRange;
-    
+
     if (periodType === 'custom') {
       const startDate = formData.get('startDate') as string;
       const endDate = formData.get('endDate') as string;
@@ -153,26 +153,28 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionDataT
     } else {
       dateRange = reportService.getDateRangeForPeriod(periodType);
     }
-    
+
     const employeeId = formData.get('employeeId') as string || undefined;
     const employeeName = formData.get('employeeName') as string || undefined;
-    
+    const sentimentFilter = formData.get('sentimentFilter') as string || 'all';
+
     // Generate report
     const report = await reportService.generateReport(
       reportType as any,
       reportFormat,
       userId,
       dateRange,
-      employeeId
+      employeeId,
+      sentimentFilter
     );
-    
+
     // Format the date range for display if available
-    const dateRangePart = dateRange ? 
+    const dateRangePart = dateRange ?
       `${dateRange.start.toLocaleDateString('fr-FR')} - ${dateRange.end.toLocaleDateString('fr-FR')}` : '';
-    
+
     // Return the full report object
-    return { 
-      success: true, 
+    return {
+      success: true,
       report: {
         id: report._id?.toString(),
         name: report.name,
@@ -183,52 +185,52 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionDataT
         size: report.size,
         dateRange: dateRangePart,
         employee: employeeName
-      } 
+      }
     };
   }
-  
+
   if (action === 'update-monthly-report') {
     const isEnabled = formData.get('isEnabled') === 'true';
     const reportFormat = formData.get('reportFormat') as 'PDF' | 'EXCEL' | 'BOTH';
-    
+
     // Update application settings
     await settingsService.updateSettings({
       autoGenerateMonthlyReport: isEnabled,
       monthlyReportFormat: reportFormat
     }, userId);
-    
+
     // Update scheduler settings
     await schedulerService.updateSettings();
-    
+
     return { success: true };
   }
-  
+
   if (action === 'run-now') {
     const taskId = formData.get('taskId') as string;
-    
+
     // Run the scheduled task now
     const success = await schedulerService.runTask(taskId);
-    
+
     return { success };
   }
-  
+
   return { success: false, error: 'Action inconnue' };
 }
 
 export default function ReportsPage() {
-  const { 
-    recentReports, 
-    availableReportTypes, 
+  const {
+    recentReports,
+    availableReportTypes,
     employees,
     settings,
     scheduledTasks,
     lastGeneratedReport: initialLastReport
   } = useLoaderData<typeof loader>();
-  
+
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
   const submit = useSubmit();
-  
+
   // States for report generation form
   const [selectedReportType, setSelectedReportType] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('PDF');
@@ -236,18 +238,19 @@ export default function ReportsPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  
+  const [sentimentFilter, setSentimentFilter] = useState('all');
+
   // States for monthly report configuration
   const [isMonthlyReportEnabled, setIsMonthlyReportEnabled] = useState(settings.autoGenerateMonthlyReport);
   const [monthlyReportFormat, setMonthlyReportFormat] = useState<'PDF' | 'EXCEL' | 'BOTH'>(
     settings.monthlyReportFormat as 'PDF' | 'EXCEL' | 'BOTH'
   );
-  
+
   // States for modals
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
-  
+
   // State for last generated report - initialized from loader data if available
   const [lastGeneratedReport, setLastGeneratedReport] = useState<ReportType | null>(initialLastReport);
 
@@ -255,15 +258,15 @@ export default function ReportsPage() {
   React.useEffect(() => {
     if (actionData?.success && actionData.report) {
       setLastGeneratedReport(actionData.report);
-      
+
       // Store the last report in the URL for persistence across page reloads
       const reportData = encodeURIComponent(JSON.stringify(actionData.report));
       navigate(`?lastReport=${reportData}`, { replace: true });
-      
+
       // Show success dialog
       setCurrentReport(actionData.report);
       setIsSuccess(true);
-      
+
       // Auto close success dialog after 2 seconds
       setTimeout(() => {
         setIsSuccess(false);
@@ -281,14 +284,14 @@ export default function ReportsPage() {
       event.preventDefault();
       return;
     }
-    
+
     // Get employee name if required
-    const employeeName = requiresEmployee && selectedEmployeeId ? 
+    const employeeName = requiresEmployee && selectedEmployeeId ?
       employees.find(e => e.id === selectedEmployeeId)?.name : undefined;
-    
+
     // Show processing modal
     setIsProcessing(true);
-    
+
     // Add hidden fields for employee name if applicable
     if (employeeName) {
       const employeeNameInput = document.createElement('input');
@@ -304,7 +307,7 @@ export default function ReportsPage() {
     const link = document.createElement('a');
     link.href = `/admin/reports/download/${report.id}`;
     link.setAttribute('download', '');
-    
+
     // Add event listener to refresh page after download starts
     link.addEventListener('click', () => {
       // Refresh the page after a short delay to allow download to start
@@ -312,45 +315,45 @@ export default function ReportsPage() {
         navigate(0);
       }, 800);
     });
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-  
+
   const handleMonthlyReportToggle = (checked: boolean) => {
     setIsMonthlyReportEnabled(checked);
-    
+
     // Use React Router's submit function for form submission
     const formData = new FormData();
     formData.append('action', 'update-monthly-report');
     formData.append('isEnabled', checked.toString());
     formData.append('reportFormat', monthlyReportFormat);
-    
+
     submit(formData, { method: 'post' });
   };
 
   const handleMonthlyReportFormatChange = (format: string) => {
     setMonthlyReportFormat(format as 'PDF' | 'EXCEL' | 'BOTH');
-    
+
     // Use React Router's submit function for form submission
     const formData = new FormData();
     formData.append('action', 'update-monthly-report');
     formData.append('isEnabled', isMonthlyReportEnabled.toString());
     formData.append('reportFormat', format);
-    
+
     submit(formData, { method: 'post' });
   };
-  
+
   const handleRunNow = () => {
     // Use React Router's submit function for form submission
     const formData = new FormData();
     formData.append('action', 'run-now');
     formData.append('taskId', 'monthlyReport');
-    
+
     // Show processing modal
     setIsProcessing(true);
-    
+
     submit(formData, { method: 'post' });
   };
 
@@ -395,7 +398,7 @@ export default function ReportsPage() {
             Sélectionnez le type de rapport et les options souhaitées
           </CardDescription>
         </CardHeader>
-        
+
         {/* Last Generated Report Section - Moved to top with improved visibility */}
         {lastGeneratedReport && (
           <div className="mx-4 sm:mx-6 mb-5">
@@ -428,7 +431,7 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="ml-2 flex-shrink-0">
-                  <Button 
+                  <Button
                     onClick={() => handleDownloadReport(lastGeneratedReport)}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
@@ -443,17 +446,17 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
-        
+
         <CardContent className="px-4 sm:px-6">
           <Form method="post" onSubmit={handleGenerateReport}>
             <div className="space-y-4">
               <input type="hidden" name="action" value="generate-report" />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Type de rapport</label>
-                  <Select 
-                    value={selectedReportType} 
+                  <Select
+                    value={selectedReportType}
                     onValueChange={value => {
                       setSelectedReportType(value);
                       setSelectedEmployeeId(''); // Reset employee selection when type changes
@@ -472,7 +475,7 @@ export default function ReportsPage() {
                   </Select>
                   <input type="hidden" name="type" value={selectedReportType} />
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Format d'export</label>
                   <Select value={selectedFormat} onValueChange={setSelectedFormat}>
@@ -487,7 +490,7 @@ export default function ReportsPage() {
                   <input type="hidden" name="format" value={selectedFormat} />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Période</label>
@@ -506,7 +509,24 @@ export default function ReportsPage() {
                   </Select>
                   <input type="hidden" name="period" value={selectedPeriod} />
                 </div>
-                
+
+                {(selectedReportType === 'pharmacy-reviews' || selectedReportType === 'employee-reviews' || selectedReportType === 'specific-employee-reviews') && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Type d'avis</label>
+                    <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filtrer les avis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous les avis</SelectItem>
+                        <SelectItem value="positive">Avis positifs (≥ 3★)</SelectItem>
+                        <SelectItem value="negative">Avis négatifs (&lt; 3★)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <input type="hidden" name="sentimentFilter" value={sentimentFilter} />
+                  </div>
+                )}
+
                 {requiresEmployee && (
                   <div>
                     <label className="text-sm font-medium mb-2 block">Employé</label>
@@ -529,7 +549,7 @@ export default function ReportsPage() {
                   </div>
                 )}
               </div>
-              
+
               {selectedPeriod === 'custom' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -554,13 +574,13 @@ export default function ReportsPage() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex justify-end mt-4">
-                <Button 
+                <Button
                   type="submit"
                   disabled={
-                    !selectedReportType || 
-                    (requiresEmployee && !selectedEmployeeId) || 
+                    !selectedReportType ||
+                    (requiresEmployee && !selectedEmployeeId) ||
                     (selectedPeriod === 'custom' && (!customStartDate || !customEndDate))
                   }
                 >
@@ -572,7 +592,7 @@ export default function ReportsPage() {
           </Form>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
           <CardTitle className="text-base sm:text-lg">Rapports récents</CardTitle>
@@ -631,8 +651,8 @@ export default function ReportsPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => handleDownloadReport(report)}
                         >
@@ -675,8 +695,8 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <Select 
-                  value={monthlyReportFormat} 
+                <Select
+                  value={monthlyReportFormat}
                   onValueChange={handleMonthlyReportFormatChange}
                 >
                   <SelectTrigger id="report-format" className="w-[120px]">
@@ -691,20 +711,20 @@ export default function ReportsPage() {
                   <span className="text-xs text-muted-foreground">
                     {isMonthlyReportEnabled ? 'Activé' : 'Désactivé'}
                   </span>
-                  <Switch 
+                  <Switch
                     checked={isMonthlyReportEnabled}
-                    onCheckedChange={handleMonthlyReportToggle} 
+                    onCheckedChange={handleMonthlyReportToggle}
                   />
                 </div>
               </div>
             </div>
-            
+
             {scheduledTasks.monthlyReport && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <div>
                   <span className="font-medium">Dernière génération: </span>
-                  {scheduledTasks.monthlyReport.lastRun ? 
-                    formatDate(scheduledTasks.monthlyReport.lastRun) : 
+                  {scheduledTasks.monthlyReport.lastRun ?
+                    formatDate(scheduledTasks.monthlyReport.lastRun) :
                     "Jamais exécuté"}
                 </div>
                 <div>
@@ -766,19 +786,19 @@ export default function ReportsPage() {
               Fermer
             </Button>
             {currentReport?.filePath && (
-              <Button 
+              <Button
                 onClick={() => {
                   const link = document.createElement('a');
                   link.href = `/admin/reports/download/${currentReport.id}`;
                   link.setAttribute('download', '');
-                  
+
                   link.addEventListener('click', () => {
                     setIsSuccess(false);
                     setTimeout(() => {
                       navigate(0);
                     }, 800);
                   });
-                  
+
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
