@@ -11,8 +11,6 @@ s/public/uploads
 
 # Env vars
 .env
-.env.*
-!.env.example
 
 # Logs
 npm-debug.log*
