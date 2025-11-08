@@ -1,0 +1,8 @@
+{
+  "monthlyReport": {
+    "isEnabled": true,
+    "interval": "monthly",
+    "reportFormat": "PDF",
+    "nextRun": "2025-05-31T23:00:00.000Z"
+  }
+}
