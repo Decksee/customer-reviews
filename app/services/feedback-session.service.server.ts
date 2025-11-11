@@ -1064,6 +1064,7 @@ export default class FeedbackSessionService extends BaseService<
           employeeId: item._id.toString(),
           totalReviews: item.totalReviews,
           averageRating: parseFloat(item.averageRating.toFixed(1)),
+          score: (item.averageRating * Math.log(item.totalReviews + 1)).toFixed(2),
           ratingDistribution: distribution,
         };
       });

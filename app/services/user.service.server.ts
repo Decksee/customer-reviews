@@ -163,6 +163,7 @@ export default class UserService extends BaseService<
             role: (employee.position as any)?.title || employee.currentPosition || 'Employé',
             rating: stats.averageRating || 0,
             reviewCount: stats.totalReviews || 0,
+            score: stats.score || 0,
             avatar: employee.photo || `/images/employees/employee1.jpg`
           });
         }
@@ -170,6 +171,8 @@ export default class UserService extends BaseService<
       
       // Sort by rating (highest first) and limit the result
       enrichedEmployees.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+      //Sort by score (highest first) and limit the result
+      enrichedEmployees.sort((a, b) => b.score - a.score);
       
       return enrichedEmployees.slice(0, limit);
     } catch (error) {

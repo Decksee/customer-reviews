@@ -26,6 +26,7 @@ interface EmployeeStats {
   employeeId: string;
   totalReviews: number;
   averageRating: number;
+  score: number;
   ratingDistribution: Record<string, number>;
 }
 
@@ -77,7 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     : 0;
   
   // Sort ALL employees by rating first, then take top 5
-  const sortedEmployeeStats = employeeStats.sort((a, b) => b.averageRating - a.averageRating);
+  const sortedEmployeeStats = employeeStats.sort((a, b) => b.score - a.score);
   
   // Get top employees (now properly sorted)
   const topEmployees: TopEmployee[] = [];
