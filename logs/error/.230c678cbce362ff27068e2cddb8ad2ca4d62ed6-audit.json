@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 30
+    },
+    "auditLog": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/.230c678cbce362ff27068e2cddb8ad2ca4d62ed6-audit.json",
+    "files": [
+        {
+            "date": 1762784384057,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-10.log",
+            "hash": "b4fe1bc03e13ced24fa3b29eebfbf08d23b104a8f3a4766b9eb18c0236929c42"
+        }
+    ],
+    "hashType": "sha256"
+}

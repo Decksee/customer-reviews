@@ -1,0 +1,45 @@
+2025-11-10 15:19:44 error: "PROJECT_NAME" is required
+2025-11-10 15:20:48 info: 🟢 Database connection established successfully
+2025-11-10 15:20:48 info: 🟢 Database ping successful
+2025-11-10 15:20:48 info: Connected to the database.
+2025-11-10 15:20:48 info: Settings initialized.
+2025-11-10 15:20:49 warn: 🔴 Unable to connect to email server. Make sure you have configured the SMTP options in .env
+2025-11-10 15:20:49 error: Failed to initialize email server.
+2025-11-10 15:20:49 info: Monthly report generation scheduled for the end of month at Sun Nov 30 2025 23:55:00 GMT+0100 (West Africa Standard Time)
+2025-11-10 15:20:49 info: Scheduler initialized successfully with cron jobs
+2025-11-10 15:20:49 info: Report scheduler initialized with cron jobs.
+2025-11-10 15:21:56 info: 🟢 Database connection established successfully
+2025-11-10 15:21:56 info: 🟢 Database ping successful
+2025-11-10 15:21:56 info: Connected to the database.
+2025-11-10 15:21:56 info: Settings initialized.
+2025-11-10 15:21:56 warn: 🔴 Unable to connect to email server. Make sure you have configured the SMTP options in .env
+2025-11-10 15:21:56 error: Failed to initialize email server.
+2025-11-10 15:21:56 info: Monthly report generation scheduled for the end of month at Sun Nov 30 2025 23:55:00 GMT+0100 (West Africa Standard Time)
+2025-11-10 15:21:56 info: Scheduler initialized successfully with cron jobs
+2025-11-10 15:21:56 info: Report scheduler initialized with cron jobs.
+2025-11-10 15:50:28 info: 🟢 Database connection established successfully
+2025-11-10 15:50:28 info: Connected to the database.
+2025-11-10 15:50:28 info: 🟢 Database connection established successfully
+2025-11-10 15:50:28 info: 🟢 Database ping successful
+2025-11-10 15:50:28 info: Connected to the database.
+2025-11-10 15:50:28 info: Settings initialized.
+2025-11-10 15:50:28 info: Settings initialized.
+2025-11-10 15:50:28 warn: 🔴 Unable to connect to email server. Make sure you have configured the SMTP options in .env
+2025-11-10 15:50:28 error: Failed to initialize email server.
+2025-11-10 15:50:28 info: Monthly report generation scheduled for the end of month at Sun Nov 30 2025 23:55:00 GMT+0100 (West Africa Standard Time)
+2025-11-10 15:50:28 info: Scheduler initialized successfully with cron jobs
+2025-11-10 15:50:28 info: Report scheduler initialized with cron jobs.
+2025-11-10 15:50:28 warn: 🔴 Unable to connect to email server. Make sure you have configured the SMTP options in .env
+2025-11-10 15:50:28 error: Failed to initialize email server.
+2025-11-10 15:50:28 info: Report scheduler initialized with cron jobs.
+2025-11-10 17:49:27 info: Generated report data: 2 items for type pharmacy-reviews
+2025-11-10 17:49:27 info: Starting PDF generation for pharmacy-reviews with 2 items
+2025-11-10 17:49:27 info: Adding cover page...
+2025-11-10 17:49:27 info: Adding content page...
+2025-11-10 17:49:27 info: Adding header to content page...
+2025-11-10 17:49:27 info: Content will start at Y position: 100
+2025-11-10 17:49:27 info: Adding data table at Y position: 231.344
+2025-11-10 17:49:27 info: Rendering 2 rows for pharmacy-reviews report
+2025-11-10 17:49:27 info: Table complete, Y position now: 348.546
+2025-11-10 17:49:27 info: Adding summary section at Y position: 348.546
+2025-11-10 17:49:27 info: Finalizing PDF document...
