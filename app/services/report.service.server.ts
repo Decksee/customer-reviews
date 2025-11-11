@@ -68,7 +68,7 @@ export default class ReportService extends BaseService<
       const reportName = await this.getReportName(type, employeeId, dateRange);
 
       // Generate data for the report, filtered by date range
-      const reportData = await this.getReportData(type, dateRange, employeeId);
+      const reportData = await this.getReportData(type, dateRange, employeeId, sentimentFilter);
 
       // Log data for debugging
       logger.info(`Generated report data: ${reportData.length} items for type ${type}`);
@@ -1338,7 +1338,7 @@ export default class ReportService extends BaseService<
   /**
    * Get sample data for report based on type
    */
-  private async getReportData(type: IReport['type'], dateRange?: { start: Date; end: Date }, employeeId?: string): Promise<any[]> {
+  private async getReportData(type: IReport['type'], dateRange?: { start: Date; end: Date }, employeeId?: string, sentimentFilter?: string): Promise<any[]> {
     // In a production environment, we only return real data from the database
 
     switch (type) {
@@ -1503,7 +1503,8 @@ export default class ReportService extends BaseService<
             adjustedTimeFilter,
             page,
             limit,
-            ratingFilter
+            ratingFilter,
+            sentimentFilter
           );
 
           if (ratings && ratings.length > 0) {
@@ -1566,7 +1567,8 @@ export default class ReportService extends BaseService<
           const { ratings, total } = await feedbackSessionService.getEmployeeRatings(
             targetEmployeeId,
             page,
-            limit
+            limit,
+            sentimentFilter
           );
 
           if (ratings && ratings.length > 0) {
