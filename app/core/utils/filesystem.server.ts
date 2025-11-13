@@ -27,7 +27,8 @@ class FileSystemUtils {
   }
 
   public getLogDir(): string {
-    return path.resolve(this.rootDir(), "logs");
+    // return path.resolve(this.rootDir(), "logs");
+    return process.env.LOG_DIR || '';
   }
 
   /**
