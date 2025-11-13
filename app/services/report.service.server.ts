@@ -1694,6 +1694,19 @@ export default class ReportService extends BaseService<
   }
 
   /**
+ * Get a report by ID
+ */
+  async getReportById(reportId: string) {
+    try {
+      const report = await this.model.findById(reportId);
+      return report;
+    } catch (error) {
+      logger.error('Error getting report by ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get all available report types
    */
   getAvailableReportTypes() {

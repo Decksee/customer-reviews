@@ -9,6 +9,16 @@
             "date": 1762784384057,
             "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-10.log",
             "hash": "b4fe1bc03e13ced24fa3b29eebfbf08d23b104a8f3a4766b9eb18c0236929c42"
+        },
+        {
+            "date": 1762850751162,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-11.log",
+            "hash": "4881fc3bdc7ab088eb09e7f8bfca8ebd66912b49e413c1750bba87ab1a4c0718"
+        },
+        {
+            "date": 1762939022791,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-12.log",
+            "hash": "194b3537d5d59ae16c0eff89f681d521a8aa0bf010977d1356f76f4269b75bea"
         }
     ],
     "hashType": "sha256"

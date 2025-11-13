@@ -1,0 +1,13 @@
+2025-11-12 10:17:15 info: 🟢 Database connection established successfully
+2025-11-12 10:17:15 info: 🟢 Database ping successful
+2025-11-12 10:17:15 info: Connected to the database.
+2025-11-12 10:17:15 info: Settings initialized.
+2025-11-12 10:17:16 warn: 🔴 Unable to connect to email server. Make sure you have configured the SMTP options in .env
+2025-11-12 10:17:16 error: Failed to initialize email server.
+2025-11-12 10:17:16 info: Monthly report generation scheduled for the end of month at Sun Nov 30 2025 23:55:00 GMT+0100 (West Africa Standard Time)
+2025-11-12 10:17:16 info: Scheduler initialized successfully with cron jobs
+2025-11-12 10:17:16 info: Report scheduler initialized with cron jobs.
+2025-11-12 11:20:48 warn: ⚠️ Database connection lost. Attempting to reconnect...
+2025-11-12 11:20:50 info: 🟢 Database connection re-established
+2025-11-12 11:44:06 warn: ⚠️ Database connection lost. Attempting to reconnect...
+2025-11-12 11:44:08 info: 🟢 Database connection re-established

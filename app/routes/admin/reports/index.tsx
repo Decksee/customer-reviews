@@ -36,7 +36,8 @@ import {
   Calendar,
   Loader2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
@@ -249,6 +250,7 @@ export default function ReportsPage() {
   // States for modals
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
 
   // State for last generated report - initialized from loader data if available
@@ -259,19 +261,22 @@ export default function ReportsPage() {
     if (actionData?.success && actionData.report) {
       setLastGeneratedReport(actionData.report);
 
-      // Store the last report in the URL for persistence across page reloads
       const reportData = encodeURIComponent(JSON.stringify(actionData.report));
       navigate(`?lastReport=${reportData}`, { replace: true });
 
-      // Show success dialog
       setCurrentReport(actionData.report);
-      setIsSuccess(true);
 
-      // Auto close success dialog after 2 seconds
-      setTimeout(() => {
-        setIsSuccess(false);
-        setCurrentReport(null);
-      }, 2000);
+      // Ouvrir la prévisualisation au lieu du dialog de succès
+      if (actionData.report.format === 'PDF') {
+        setIsPreviewOpen(true);
+      } else {
+        // Pour Excel, afficher juste le succès
+        setIsSuccess(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+          setCurrentReport(null);
+        }, 2000);
+      }
     }
   }, [actionData, navigate]);
 
@@ -751,6 +756,52 @@ export default function ReportsPage() {
           <div className="flex justify-center items-center py-6 sm:py-10">
             <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-blue-500" />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
+              Prévisualisation : {currentReport?.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {currentReport?.dateRange && `Période: ${currentReport.dateRange}`}
+              {currentReport?.employee && ` • Employé: ${currentReport.employee}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden rounded-md border bg-gray-50">
+            <iframe
+              src={`/admin/reports/preview/${currentReport?.id}`}
+              className="w-full h-full"
+              title="Prévisualisation du rapport"
+            />
+          </div>
+          <DialogFooter className="flex sm:flex-row flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPreviewOpen(false);
+                setCurrentReport(null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Fermer
+            </Button>
+            <Button
+              onClick={() => {
+                if (currentReport) {
+                  handleDownloadReport(currentReport);
+                  setIsPreviewOpen(false);
+                }
+              }}
+              className="w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Télécharger
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
