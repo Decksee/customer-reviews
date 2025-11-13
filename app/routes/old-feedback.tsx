@@ -441,10 +441,10 @@ const EmojiRating = ({ onChange, initialValue }: { onChange: (rating: number) =>
                 console.log(`Selected pharmacy rating: ${newValue}`);
               }}
               className={`relative w-16 h-16 md:w-20 md:h-20 lg:w-18 lg:h-18 xl:w-22 xl:h-22 rounded-full overflow-hidden ${isSelected
-                  ? `ring-4 ring-offset-4 ${item.ringColor} ${item.shadowColor} shadow-2xl`
-                  : isAnimating
-                    ? `ring-2 ring-offset-2 ${item.ringColor} ${item.shadowColor} shadow-xl`
-                    : `${item.shadowColor} shadow-lg hover:shadow-xl`
+                ? `ring-4 ring-offset-4 ${item.ringColor} ${item.shadowColor} shadow-2xl`
+                : isAnimating
+                  ? `ring-2 ring-offset-2 ${item.ringColor} ${item.shadowColor} shadow-xl`
+                  : `${item.shadowColor} shadow-lg hover:shadow-xl`
                 } focus:outline-none focus:ring-4 focus:ring-offset-4 focus:${item.ringColor} transition-all duration-300 ease-in-out touch-manipulation transform-gpu`}
               title={item.label}
               aria-label={item.label}
@@ -551,8 +551,8 @@ const EmojiRating = ({ onChange, initialValue }: { onChange: (rating: number) =>
 
             <motion.span
               className={`text-xs md:text-sm mt-3 text-center transition-all duration-300 px-3 py-1.5 rounded-full backdrop-blur-sm ${isSelected
-                  ? "font-bold text-gray-900 bg-white/30 shadow-lg border border-white/40"
-                  : "font-medium text-gray-700 bg-white/10"
+                ? "font-bold text-gray-900 bg-white/30 shadow-lg border border-white/40"
+                : "font-medium text-gray-700 bg-white/10"
                 }`}
               animate={{
                 scale: isSelected ? 1.1 : 1,

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/index";
 import { useState, useEffect } from "react";
-import { data } from "react-router";
+import { data, useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart } from "@/components/ui/chart";
 import {
@@ -51,15 +51,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   const timeFilter = url.searchParams.get("timeFilter") || "all";
   const ratingFilter = url.searchParams.get("ratingFilter") || "all";
   const page = parseInt(url.searchParams.get("page") || "1");
-  const startDate = url.searchParams.get("startDate");
-  const endDate = url.searchParams.get("endDate");
+  const sentimentFilter = url.searchParams.get("sentimentFilter") || "all";
 
   // Get pharmacy ratings data from feedback sessions
   const { ratings, stats, total } = await feedbackSessionService.getPharmacyRatings(
     timeFilter,
     page,
     10,
-    ratingFilter
+    ratingFilter,
+    sentimentFilter
   );
 
   // Get real chart data based on the time filter
@@ -72,6 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     total,
     timeFilter,
     ratingFilter,
+    sentimentFilter,
     currentPage: page
   });
 }
@@ -84,9 +85,12 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     total,
     timeFilter: initialTimeFilter,
     ratingFilter: initialRatingFilter,
+    sentimentFilter: initialSentimentFilter,
     currentPage: initialPage
   } = loaderData;
 
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   // Global time period filter
   const [timeFilter, setTimeFilter] = useState(initialTimeFilter);
   const [ratingFilter, setRatingFilter] = useState(initialRatingFilter);
@@ -95,7 +99,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
   const [isMobile, setIsMobile] = useState(false);
 
   const [customDateRange, setCustomDateRange] = useState<{ start: string, end: string } | null>(null);
-  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState(initialSentimentFilter);
 
   // Check for mobile viewport on client-side only
   useEffect(() => {
@@ -107,28 +111,94 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     }
   }, []);
 
+  const updateURLParams = (params: Record<string, string>) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) {
+        newSearchParams.set(key, value);
+      } else {
+        newSearchParams.delete(key);
+      }
+    });
+
+    navigate(`?${newSearchParams.toString()}`, { replace: true });
+  };
+
   const itemsPerPage = 10;
   const totalPages = Math.ceil(total / itemsPerPage);
+
+  const handleChangeDateStart = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStart = e.target.value;
+    setCustomDateRange(prev => ({
+      start: newStart,
+      end: prev?.end || ''
+    }));
+  };
+
+  const handleChangeDateEnd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEnd = e.target.value;
+    setCustomDateRange(prev => ({
+      start: prev?.start || '',
+      end: newEnd
+    }));
+
+    if (customDateRange?.start && newEnd) {
+      updateURLParams({
+        timeFilter: 'custom',
+        startDate: customDateRange.start,
+        endDate: newEnd,
+        ratingFilter: ratingFilter,
+        page: '1'
+      });
+    }
+  };
 
   // Handlers for filter changes
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
-    if (value === "custom" && customDateRange?.start && customDateRange?.end) {
-      window.location.href = `/admin/pharmacy-ratings?timeFilter=custom&startDate=${customDateRange.start}&endDate=${customDateRange.end}&ratingFilter=${ratingFilter}&page=1`;
-    } else if (value !== "custom") {
-      window.location.href = `/admin/pharmacy-ratings?timeFilter=${value}&ratingFilter=${ratingFilter}&page=1`;
+
+    if (value !== "custom") {
+      updateURLParams({
+        timeFilter: value,
+        ratingFilter: ratingFilter,
+        page: '1',
+        startDate: '', // Supprimer les dates si ce n'est pas custom
+        endDate: ''
+      });
     }
   };
 
-
   const handleRatingFilterChange = (value: string) => {
     setRatingFilter(value);
-    window.location.href = `/admin/pharmacy-ratings?timeFilter=${timeFilter}&ratingFilter=${value}&page=1`;
+
+    updateURLParams({
+      timeFilter: timeFilter,
+      ratingFilter: value,
+      page: '1'
+    });
+  };
+
+  const handleSentimentFilterChange = (value: string) => {
+    setSentimentFilter(value);
+    setCurrentPage(1);
+
+    updateURLParams({
+      timeFilter: timeFilter,
+      ratingFilter: ratingFilter,
+      sentimentFilter: value,
+      page: '1'
+    });
   };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    window.location.href = `/admin/pharmacy-ratings?timeFilter=${timeFilter}&ratingFilter=${ratingFilter}&page=${page}`;
+
+    updateURLParams({
+      timeFilter: timeFilter,
+      ratingFilter: ratingFilter,
+      page: page.toString()
+    });
   };
 
   // Format date helper
@@ -209,13 +279,15 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
             <div className="flex gap-2">
               <input
                 type="date"
+                value={customDateRange?.start || ''}
                 className="px-3 py-2 border rounded-md text-sm"
-                onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value, end: prev?.end || '' }))}
+                onChange={handleChangeDateStart}
               />
               <input
                 type="date"
+                value={customDateRange?.end || ''}
                 className="px-3 py-2 border rounded-md text-sm"
-                onChange={(e) => setCustomDateRange(prev => ({ start: prev?.start || '', end: e.target.value }))}
+                onChange={handleChangeDateEnd}
               />
             </div>
           )}
@@ -372,8 +444,8 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                 </div>
                 <div className="flex gap-2">
                   <Select
-                  // value={sentimentFilter}
-                  // onValueChange={handleSentimentFilterChange}
+                    value={sentimentFilter}
+                    onValueChange={handleSentimentFilterChange}
                   >
                     <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Type d'avis" />
