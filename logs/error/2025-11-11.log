@@ -1,0 +1,13 @@
+2025-11-11 09:46:03 error: Failed to initialize email server.
+2025-11-11 11:21:50 error: Failed to initialize email server.
+2025-11-11 11:22:16 error: Failed to initialize email server.
+2025-11-11 11:26:04 error: Failed to initialize email server.
+2025-11-11 11:33:43 error: Error getting report by ID: Cast to ObjectId failed for value "undefined" (type string) at path "_id" for model "Report"
+2025-11-11 15:34:06 error: Failed to initialize email server.
+2025-11-11 15:34:09 error: Failed to initialize email server.
+2025-11-11 15:34:11 error: Failed to initialize email server.
+2025-11-11 15:34:53 error: Failed to initialize email server.
+2025-11-11 15:34:54 error: Failed to initialize email server.
+2025-11-11 16:33:45 error: Error getting report by ID: Cast to ObjectId failed for value "undefined" (type string) at path "_id" for model "Report"
+2025-11-11 18:48:15 error: Error getting report by ID: Cast to ObjectId failed for value "undefined" (type string) at path "_id" for model "Report"
+2025-11-11 18:49:58 error: Error getting report by ID: Cast to ObjectId failed for value "undefined" (type string) at path "_id" for model "Report"

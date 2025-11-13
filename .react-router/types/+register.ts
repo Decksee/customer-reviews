@@ -20,6 +20,9 @@ type Params = {
   "/admin/reports/download/:id": {
     "id": string;
   };
+  "/admin/reports/preview/:id": {
+    "id": string;
+  };
   "/admin": {};
   "/admin/employees": {};
   "/admin/employees/view/:id": {

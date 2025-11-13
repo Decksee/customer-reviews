@@ -11,6 +11,7 @@ export default [
   // Sync route for feedback session background sync
   route("/sync", "routes/sync.tsx"),
   route("/admin/reports/download/:id", "routes/admin/reports/download.$id.tsx"),
+  route("/admin/reports/preview/:id", "routes/admin/reports/preview.$id.tsx"),
   
   /*********************** Admin Routes ****************************/
   layout("routes/admin-layout.tsx", [
