@@ -126,9 +126,9 @@ export default class FeedbackSessionService extends BaseService<
   async updateEmployeeRatings(
     sessionId: string,
     employeeRatings: Array<{
-      employeeId: string,
-      rating: number,
-      comment?: string
+      employeeId: string;
+      rating: number;
+      comment?: string;
     }>
   ): Promise<IFeedbackSession | null> {
     try {
@@ -304,11 +304,13 @@ export default class FeedbackSessionService extends BaseService<
     deviceId: string
   ): Promise<IFeedbackSession | null> {
     try {
-      return await this.model.findOne({
-        deviceId,
-        status: 'active',
-        processed: false
-      }).sort({ lastActiveAt: -1 });
+      return await this.model
+        .findOne({
+          deviceId,
+          status: "active",
+          processed: false,
+        })
+        .sort({ lastActiveAt: -1 });
     } catch (error) {
       logger.error("Error getting active session by device ID:", error);
       return null;
@@ -389,13 +391,18 @@ export default class FeedbackSessionService extends BaseService<
           session.pharmacyRating = sessionData.pharmacyRating;
         }
 
-        if (sessionData.employeeRatings && sessionData.employeeRatings.length > 0) {
+        if (
+          sessionData.employeeRatings &&
+          sessionData.employeeRatings.length > 0
+        ) {
           // Convert string IDs to ObjectIds
-          const formattedRatings = sessionData.employeeRatings.map((rating: any) => ({
-            employeeId: new mongoose.Types.ObjectId(rating.employeeId),
-            rating: rating.rating,
-            comment: rating.comment
-          }));
+          const formattedRatings = sessionData.employeeRatings.map(
+            (rating: any) => ({
+              employeeId: new mongoose.Types.ObjectId(rating.employeeId),
+              rating: rating.rating,
+              comment: rating.comment,
+            })
+          );
 
           session.employeeRatings = formattedRatings;
         }
@@ -437,7 +444,10 @@ export default class FeedbackSessionService extends BaseService<
           newSessionData.pharmacyRating = sessionData.pharmacyRating;
         }
 
-        if (sessionData.employeeRatings && sessionData.employeeRatings.length > 0) {
+        if (
+          sessionData.employeeRatings &&
+          sessionData.employeeRatings.length > 0
+        ) {
           // Convert string IDs to ObjectIds
           newSessionData.employeeRatings = sessionData.employeeRatings.map(
             (rating: any) => ({
@@ -477,20 +487,24 @@ export default class FeedbackSessionService extends BaseService<
    * @param search - Optional search term for client name or contact info
    * @returns Promise<{clients: any[], total: number}> - Paginated clients and total count
    */
-  async getClientsList(page: number = 1, limit: number = 10, search?: string): Promise<{ clients: any[], total: number }> {
+  async getClientsList(
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ): Promise<{ clients: any[]; total: number }> {
     try {
       const skip = (page - 1) * limit;
 
       // Build the search filter if provided
       const searchFilter: any = search
         ? {
-          $or: [
-            { 'clientData.firstName': { $regex: search, $options: 'i' } },
-            { 'clientData.lastName': { $regex: search, $options: 'i' } },
-            { 'clientData.email': { $regex: search, $options: 'i' } },
-            { 'clientData.phone': { $regex: search, $options: 'i' } }
-          ]
-        }
+            $or: [
+              { "clientData.firstName": { $regex: search, $options: "i" } },
+              { "clientData.lastName": { $regex: search, $options: "i" } },
+              { "clientData.email": { $regex: search, $options: "i" } },
+              { "clientData.phone": { $regex: search, $options: "i" } },
+            ],
+          }
         : {};
 
       // Only include sessions with client data
@@ -545,12 +559,12 @@ export default class FeedbackSessionService extends BaseService<
    * @returns Promise<{ratings: any[], stats: any, total: number}> - Ratings data, stats and total count
    */
   async getPharmacyRatings(
-    timeFilter: string = 'all',
+    timeFilter: string = "all",
     page: number = 1,
     limit: number = 10,
     ratingFilter?: string,
     sentimentFilter: string = "all"
-  ): Promise<{ ratings: any[], stats: any, total: number }> {
+  ): Promise<{ ratings: any[]; stats: any; total: number }> {
     try {
       const skip = (page - 1) * limit;
 
@@ -558,7 +572,7 @@ export default class FeedbackSessionService extends BaseService<
       const dateFilter: any = {};
       const now = new Date();
 
-      if (timeFilter !== 'all') {
+      if (timeFilter !== "all") {
         let startDate = new Date();
 
         switch (timeFilter) {
@@ -592,11 +606,15 @@ export default class FeedbackSessionService extends BaseService<
       // AJOUTEZ CE BLOC - Filtre de sentiment
       let ratingNumFilter: any;
 
-      if (sentimentFilter === 'positive') {
-        ratingNumFilter = { pharmacyRating: { $gte: 4, $exists: true, $ne: null } };
-      } else if (sentimentFilter === 'negative') {
-        ratingNumFilter = { pharmacyRating: { $lte: 3, $exists: true, $ne: null } };
-      } else if (ratingFilter && ratingFilter !== 'all') {
+      if (sentimentFilter === "positive") {
+        ratingNumFilter = {
+          pharmacyRating: { $gte: 4, $exists: true, $ne: null },
+        };
+      } else if (sentimentFilter === "negative") {
+        ratingNumFilter = {
+          pharmacyRating: { $lte: 3, $exists: true, $ne: null },
+        };
+      } else if (ratingFilter && ratingFilter !== "all") {
         // Filtre par note exacte (prioritaire)
         ratingNumFilter = { pharmacyRating: parseInt(ratingFilter) };
       } else {
@@ -625,13 +643,15 @@ export default class FeedbackSessionService extends BaseService<
         id: session._id.toString(),
         sessionId: session.sessionId,
         rating: session.pharmacyRating || 0,
-        comment: '',
+        comment: "",
         date: session.lastActiveAt,
         client: {
           name: session.clientData
-            ? `${session.clientData.firstName || ''} ${session.clientData.lastName || ''}`.trim()
-            : 'Anonymous'
-        }
+            ? `${session.clientData.firstName || ""} ${
+                session.clientData.lastName || ""
+              }`.trim()
+            : "Anonymous",
+        },
       }));
 
       // Calculate statistics
@@ -657,7 +677,7 @@ export default class FeedbackSessionService extends BaseService<
       const dateFilter: any = {};
       const now = new Date();
 
-      if (timeFilter !== 'all') {
+      if (timeFilter !== "all") {
         let startDate = new Date();
 
         switch (timeFilter) {
@@ -708,7 +728,7 @@ export default class FeedbackSessionService extends BaseService<
         5: 0,
       };
 
-      sessions.forEach(session => {
+      sessions.forEach((session) => {
         if (session.pharmacyRating) {
           totalRating += session.pharmacyRating;
           ratingsDistribution[session.pharmacyRating] =
@@ -717,12 +737,13 @@ export default class FeedbackSessionService extends BaseService<
       });
 
       const totalReviews = sessions.length;
-      const averageRating = totalReviews > 0 ? +(totalRating / totalReviews).toFixed(1) : 0;
+      const averageRating =
+        totalReviews > 0 ? +(totalRating / totalReviews).toFixed(1) : 0;
 
       // Calculate comparison to last period
       let comparisonToLastMonth = 0;
 
-      if (timeFilter !== 'all') {
+      if (timeFilter !== "all") {
         // Calculate the previous period
         const currentPeriodFilter = { ...filter };
         const previousPeriodFilter: any = {};
@@ -756,7 +777,7 @@ export default class FeedbackSessionService extends BaseService<
 
         previousPeriodFilter.lastActiveAt = {
           $gte: previousStartDate,
-          $lte: previousEndDate
+          $lte: previousEndDate,
         };
         previousPeriodFilter.pharmacyRating = { $exists: true, $ne: null };
 
@@ -772,13 +793,15 @@ export default class FeedbackSessionService extends BaseService<
         });
 
         const previousTotalReviews = previousSessions.length;
-        const previousAverageRating = previousTotalReviews > 0
-          ? +(previousTotalRating / previousTotalReviews).toFixed(1)
-          : 0;
+        const previousAverageRating =
+          previousTotalReviews > 0
+            ? +(previousTotalRating / previousTotalReviews).toFixed(1)
+            : 0;
 
-        comparisonToLastMonth = previousAverageRating > 0
-          ? +(averageRating - previousAverageRating).toFixed(1)
-          : 0;
+        comparisonToLastMonth =
+          previousAverageRating > 0
+            ? +(averageRating - previousAverageRating).toFixed(1)
+            : 0;
       }
 
       return {
@@ -814,21 +837,35 @@ export default class FeedbackSessionService extends BaseService<
   async getEmployeeRatings(
     employeeId?: string,
     page: number = 1,
-    limit: number = 10
-  ): Promise<{ ratings: any[], total: number }> {
+    limit: number = 10,
+    sentimentFilter?: string
+  ): Promise<{ ratings: any[]; total: number }> {
     try {
       // First find all sessions with employee ratings
-      let matchFilter: any = { 'employeeRatings.0': { $exists: true } };
+      let matchFilter: any = { "employeeRatings.0": { $exists: true } };
 
       // If employeeId provided, filter for that specific employee
       if (employeeId) {
         matchFilter = {
           employeeRatings: {
             $elemMatch: {
-              employeeId: new mongoose.Types.ObjectId(employeeId)
-            }
-          }
+              employeeId: new mongoose.Types.ObjectId(employeeId),
+            },
+          },
         };
+      }
+
+      // If sentiment filter provided, integrate it to the query
+      if (sentimentFilter) {
+        let sentimentQuery: any;
+        if (sentimentFilter === "positive") {
+          sentimentQuery = { "employeeRatings.rating": { $gte: 3 } };
+        } else if (sentimentFilter === "negative") {
+          sentimentQuery = { "employeeRatings.rating": { $lt: 3 } };
+        }
+        if (sentimentQuery) {
+          matchFilter = { ...matchFilter, ...sentimentQuery };
+        }
       }
 
       // We need to use aggregation to extract employee ratings
@@ -836,13 +873,17 @@ export default class FeedbackSessionService extends BaseService<
         { $match: matchFilter },
         { $unwind: "$employeeRatings" },
         // If employeeId provided, filter again after unwinding
-        ...(employeeId ? [
-          {
-            $match: {
-              'employeeRatings.employeeId': new mongoose.Types.ObjectId(employeeId)
-            }
-          } as PipelineStage
-        ] : []),
+        ...(employeeId
+          ? [
+              {
+                $match: {
+                  "employeeRatings.employeeId": new mongoose.Types.ObjectId(
+                    employeeId
+                  ),
+                },
+              } as PipelineStage,
+            ]
+          : []),
         // Join with users collection to get employee details
         {
           $lookup: {
@@ -894,15 +935,19 @@ export default class FeedbackSessionService extends BaseService<
       // Get total count first (no need for lookup here)
       const countPipeline: PipelineStage[] = [
         { $match: matchFilter },
-        { $unwind: '$employeeRatings' },
-        ...(employeeId ? [
-          {
-            $match: {
-              'employeeRatings.employeeId': new mongoose.Types.ObjectId(employeeId)
-            }
-          } as PipelineStage
-        ] : []),
-        { $count: 'total' }
+        { $unwind: "$employeeRatings" },
+        ...(employeeId
+          ? [
+              {
+                $match: {
+                  "employeeRatings.employeeId": new mongoose.Types.ObjectId(
+                    employeeId
+                  ),
+                },
+              } as PipelineStage,
+            ]
+          : []),
+        { $count: "total" },
       ];
 
       const countResult = await this.model.aggregate(countPipeline).exec();
@@ -928,11 +973,16 @@ export default class FeedbackSessionService extends BaseService<
           position: item.positionTitle || item.employee?.currentPosition || "",
         },
         // Also include a formatted name directly for convenience
-        employeeName: item.employee ?
-          `${item.employee.lastName || ''} ${item.employee.firstName || ''}`.trim() : 'N/A',
+        employeeName: item.employee
+          ? `${item.employee.lastName || ""} ${
+              item.employee.firstName || ""
+            }`.trim()
+          : "N/A",
         clientName: item.clientData
-          ? `${item.clientData.firstName || ''} ${item.clientData.lastName || ''}`.trim()
-          : 'Anonymous'
+          ? `${item.clientData.firstName || ""} ${
+              item.clientData.lastName || ""
+            }`.trim()
+          : "Anonymous",
       }));
 
       return { ratings, total };
@@ -950,16 +1000,16 @@ export default class FeedbackSessionService extends BaseService<
   async getEmployeeStatistics(employeeId?: string): Promise<any> {
     try {
       // First find all sessions with employee ratings
-      let matchFilter: any = { 'employeeRatings.0': { $exists: true } };
+      let matchFilter: any = { "employeeRatings.0": { $exists: true } };
 
       // If employeeId provided, filter for that specific employee
       if (employeeId) {
         matchFilter = {
           employeeRatings: {
             $elemMatch: {
-              employeeId: new mongoose.Types.ObjectId(employeeId)
-            }
-          }
+              employeeId: new mongoose.Types.ObjectId(employeeId),
+            },
+          },
         };
       }
 
@@ -968,13 +1018,17 @@ export default class FeedbackSessionService extends BaseService<
         { $match: matchFilter },
         { $unwind: "$employeeRatings" },
         // If employeeId provided, filter again after unwinding
-        ...(employeeId ? [
-          {
-            $match: {
-              'employeeRatings.employeeId': new mongoose.Types.ObjectId(employeeId)
-            }
-          }
-        ] : []),
+        ...(employeeId
+          ? [
+              {
+                $match: {
+                  "employeeRatings.employeeId": new mongoose.Types.ObjectId(
+                    employeeId
+                  ),
+                },
+              },
+            ]
+          : []),
         {
           $group: {
             _id: "$employeeRatings.employeeId",
@@ -1017,7 +1071,9 @@ export default class FeedbackSessionService extends BaseService<
           employeeId: item._id.toString(),
           totalReviews: item.totalReviews,
           averageRating: parseFloat(item.averageRating.toFixed(1)),
-          score: (item.averageRating * Math.log(item.totalReviews + 1)).toFixed(2),
+          score: (item.averageRating * Math.log(item.totalReviews + 1)).toFixed(
+            2
+          ),
           ratingDistribution: distribution,
         };
       });
@@ -1044,7 +1100,7 @@ export default class FeedbackSessionService extends BaseService<
       const dateFilter: any = {};
       const now = new Date();
 
-      if (timeFilter !== 'all') {
+      if (timeFilter !== "all") {
         let startDate = new Date();
 
         switch (timeFilter) {
@@ -1087,7 +1143,7 @@ export default class FeedbackSessionService extends BaseService<
 
       // Generate appropriate labels and group data based on timeFilter
       let labels: string[] = [];
-      let groupedData: Record<string, { sum: number, count: number }> = {};
+      let groupedData: Record<string, { sum: number; count: number }> = {};
 
       switch (timeFilter) {
         case "30days":
@@ -1099,15 +1155,19 @@ export default class FeedbackSessionService extends BaseService<
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 6);
 
-            const label = `${weekStart.getDate()}/${weekStart.getMonth() + 1} - ${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`;
+            const label = `${weekStart.getDate()}/${
+              weekStart.getMonth() + 1
+            } - ${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`;
             labels.push(label);
             groupedData[label] = { sum: 0, count: 0 };
           }
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.pharmacyRating) {
               const sessionDate = new Date(session.lastActiveAt);
-              const daysDiff = Math.floor((now.getTime() - sessionDate.getTime()) / (1000 * 3600 * 24));
+              const daysDiff = Math.floor(
+                (now.getTime() - sessionDate.getTime()) / (1000 * 3600 * 24)
+              );
               const weekIndex = Math.floor(daysDiff / 7);
 
               if (weekIndex >= 0 && weekIndex < 5) {
@@ -1119,7 +1179,7 @@ export default class FeedbackSessionService extends BaseService<
           });
           break;
 
-        case 'quarter':
+        case "quarter":
           // Group by months in the last quarter
           labels = [];
           for (let i = 2; i >= 0; i--) {
@@ -1132,7 +1192,7 @@ export default class FeedbackSessionService extends BaseService<
             groupedData[monthName] = { sum: 0, count: 0 };
           }
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.pharmacyRating) {
               const sessionDate = new Date(session.lastActiveAt);
               const monthName = sessionDate.toLocaleDateString("fr-FR", {
@@ -1146,7 +1206,7 @@ export default class FeedbackSessionService extends BaseService<
           });
           break;
 
-        case 'semester':
+        case "semester":
           // Group by months in the last semester
           labels = [];
           for (let i = 5; i >= 0; i--) {
@@ -1159,7 +1219,7 @@ export default class FeedbackSessionService extends BaseService<
             groupedData[monthName] = { sum: 0, count: 0 };
           }
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.pharmacyRating) {
               const sessionDate = new Date(session.lastActiveAt);
               const monthName = sessionDate.toLocaleDateString("fr-FR", {
@@ -1173,8 +1233,8 @@ export default class FeedbackSessionService extends BaseService<
           });
           break;
 
-        case 'year':
-        case 'lastYear':
+        case "year":
+        case "lastYear":
           // Group by months
           labels = [
             "Jan",
@@ -1194,7 +1254,7 @@ export default class FeedbackSessionService extends BaseService<
             groupedData[label] = { sum: 0, count: 0 };
           });
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.pharmacyRating) {
               const month = new Date(session.lastActiveAt).getMonth();
               const label = labels[month];
@@ -1204,23 +1264,23 @@ export default class FeedbackSessionService extends BaseService<
           });
           break;
 
-        case 'all':
+        case "all":
           // Group by years
           labels = [];
           const yearSet = new Set<number>();
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             yearSet.add(new Date(session.lastActiveAt).getFullYear());
           });
 
           const sortedYears = Array.from(yearSet).sort();
-          labels = sortedYears.map(year => year.toString());
+          labels = sortedYears.map((year) => year.toString());
 
-          labels.forEach(label => {
+          labels.forEach((label) => {
             groupedData[label] = { sum: 0, count: 0 };
           });
 
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.pharmacyRating) {
               const year = new Date(session.lastActiveAt)
                 .getFullYear()
@@ -1289,7 +1349,20 @@ export default class FeedbackSessionService extends BaseService<
     year: number = new Date().getFullYear()
   ): Promise<any> {
     try {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
 
       // Initialize data with zeros
       const pharmacyRatings = new Array(12).fill(0);
@@ -1299,23 +1372,29 @@ export default class FeedbackSessionService extends BaseService<
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-      const sessions = await this.model.aggregate([
-        {
-          $match: {
-            lastActiveAt: { $gte: startDate, $lte: endDate },
-            $or: [
-              { pharmacyRating: { $exists: true, $ne: null } },
-              { 'employeeRatings.0': { $exists: true } }
-            ]
-          }
-        }
-      ] as unknown as PipelineStage[]).exec();
+      const sessions = await this.model
+        .aggregate([
+          {
+            $match: {
+              lastActiveAt: { $gte: startDate, $lte: endDate },
+              $or: [
+                { pharmacyRating: { $exists: true, $ne: null } },
+                { "employeeRatings.0": { $exists: true } },
+              ],
+            },
+          },
+        ] as unknown as PipelineStage[])
+        .exec();
 
       // Calculate monthly averages
-      const monthlyPharmacyRatings = new Array(12).fill(0).map(() => ({ sum: 0, count: 0 }));
-      const monthlyEmployeeRatings = new Array(12).fill(0).map(() => ({ sum: 0, count: 0 }));
+      const monthlyPharmacyRatings = new Array(12)
+        .fill(0)
+        .map(() => ({ sum: 0, count: 0 }));
+      const monthlyEmployeeRatings = new Array(12)
+        .fill(0)
+        .map(() => ({ sum: 0, count: 0 }));
 
-      sessions.forEach(session => {
+      sessions.forEach((session) => {
         const month = new Date(session.lastActiveAt).getMonth();
 
         // Pharmacy ratings
@@ -1338,18 +1417,28 @@ export default class FeedbackSessionService extends BaseService<
 
       // Calculate averages
       for (let i = 0; i < 12; i++) {
-        pharmacyRatings[i] = monthlyPharmacyRatings[i].count > 0
-          ? +(monthlyPharmacyRatings[i].sum / monthlyPharmacyRatings[i].count).toFixed(1)
-          : null;
+        pharmacyRatings[i] =
+          monthlyPharmacyRatings[i].count > 0
+            ? +(
+                monthlyPharmacyRatings[i].sum / monthlyPharmacyRatings[i].count
+              ).toFixed(1)
+            : null;
 
-        employeeRatings[i] = monthlyEmployeeRatings[i].count > 0
-          ? +(monthlyEmployeeRatings[i].sum / monthlyEmployeeRatings[i].count).toFixed(1)
-          : null;
+        employeeRatings[i] =
+          monthlyEmployeeRatings[i].count > 0
+            ? +(
+                monthlyEmployeeRatings[i].sum / monthlyEmployeeRatings[i].count
+              ).toFixed(1)
+            : null;
       }
 
       // Ensure we have reasonable values for visualization (fill nulls with 0)
-      const cleanPharmacyRatings = pharmacyRatings.map(r => r === null ? 0 : r);
-      const cleanEmployeeRatings = employeeRatings.map(r => r === null ? 0 : r);
+      const cleanPharmacyRatings = pharmacyRatings.map((r) =>
+        r === null ? 0 : r
+      );
+      const cleanEmployeeRatings = employeeRatings.map((r) =>
+        r === null ? 0 : r
+      );
 
       return {
         labels: months,
@@ -1469,45 +1558,47 @@ export default class FeedbackSessionService extends BaseService<
       const positionTitles = allPositions.map((p: any) => p.title);
 
       // Get aggregated rating data by position
-      const employees = await this.model.aggregate([
-        { $unwind: '$employeeRatings' },
-        {
-          $lookup: {
-            from: 'users', // The users collection
-            localField: 'employeeRatings.employeeId',
-            foreignField: '_id',
-            as: 'employeeData'
-          }
-        },
-        { $unwind: '$employeeData' },
-        {
-          $lookup: {
-            from: 'position', // The positions collection  
-            localField: 'employeeData.position',
-            foreignField: '_id',
-            as: 'positionData'
-          }
-        },
-        {
-          $addFields: {
-            positionTitle: {
-              $cond: {
-                if: { $gt: [{ $size: '$positionData' }, 0] },
-                then: { $arrayElemAt: ['$positionData.title', 0] },
-                else: '$employeeData.currentPosition'
-              }
-            }
-          }
-        },
-        {
-          $group: {
-            _id: '$positionTitle',
-            totalRating: { $sum: '$employeeRatings.rating' },
-            count: { $sum: 1 },
-            averageRating: { $avg: '$employeeRatings.rating' }
-          }
-        }
-      ] as unknown as PipelineStage[]).exec();
+      const employees = await this.model
+        .aggregate([
+          { $unwind: "$employeeRatings" },
+          {
+            $lookup: {
+              from: "users", // The users collection
+              localField: "employeeRatings.employeeId",
+              foreignField: "_id",
+              as: "employeeData",
+            },
+          },
+          { $unwind: "$employeeData" },
+          {
+            $lookup: {
+              from: "position", // The positions collection
+              localField: "employeeData.position",
+              foreignField: "_id",
+              as: "positionData",
+            },
+          },
+          {
+            $addFields: {
+              positionTitle: {
+                $cond: {
+                  if: { $gt: [{ $size: "$positionData" }, 0] },
+                  then: { $arrayElemAt: ["$positionData.title", 0] },
+                  else: "$employeeData.currentPosition",
+                },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: "$positionTitle",
+              totalRating: { $sum: "$employeeRatings.rating" },
+              count: { $sum: 1 },
+              averageRating: { $avg: "$employeeRatings.rating" },
+            },
+          },
+        ] as unknown as PipelineStage[])
+        .exec();
 
       // Create a map of position ratings
       const positionRatingsMap = new Map();
@@ -1516,8 +1607,9 @@ export default class FeedbackSessionService extends BaseService<
       });
 
       // Map all positions to their average ratings (0 if no ratings)
-      const averageRatingsByPosition = positionTitles.map((position: string) =>
-        +(positionRatingsMap.get(position) || 0).toFixed(1)
+      const averageRatingsByPosition = positionTitles.map(
+        (position: string) =>
+          +(positionRatingsMap.get(position) || 0).toFixed(1)
       );
 
       // Generate dynamic colors for each position
@@ -1587,14 +1679,17 @@ export default class FeedbackSessionService extends BaseService<
       }
 
       // Get all sessions with pharmacy ratings in the time frame
-      const sessions = await this.model.find({
-        lastActiveAt: { $gte: startDate },
-        pharmacyRating: { $exists: true, $ne: null }
-      }).sort({ lastActiveAt: 1 });
+      const sessions = await this.model
+        .find({
+          lastActiveAt: { $gte: startDate },
+          pharmacyRating: { $exists: true, $ne: null },
+        })
+        .sort({ lastActiveAt: 1 });
 
       // Group by month and calculate satisfaction percentage
       // Assuming rating 4-5 is satisfied, 1-3 is not satisfied
-      const monthlyData: Record<string, { satisfied: number, total: number }> = {};
+      const monthlyData: Record<string, { satisfied: number; total: number }> =
+        {};
 
       // Initialize all months in the period
       if (timeFrame === "year" || timeFrame === "all") {
@@ -1621,8 +1716,10 @@ export default class FeedbackSessionService extends BaseService<
         const date = new Date(session.lastActiveAt);
         let key: string;
 
-        if (timeFrame === 'month') {
-          key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+        if (timeFrame === "month") {
+          key = `${date.getFullYear()}-${
+            date.getMonth() + 1
+          }-${date.getDate()}`;
         } else {
           key = `${date.getFullYear()}-${date.getMonth() + 1}`;
         }
@@ -1638,9 +1735,9 @@ export default class FeedbackSessionService extends BaseService<
       });
 
       // Calculate satisfaction percentages and prepare data for chart
-      let sortedData: { label: string, value: number }[];
+      let sortedData: { label: string; value: number }[];
 
-      if (timeFrame === 'month') {
+      if (timeFrame === "month") {
         // For month, return daily data for the last 30 days
         sortedData = Object.entries(monthlyData)
           .sort(([a], [b]) => a.localeCompare(b))
@@ -1815,9 +1912,9 @@ export default class FeedbackSessionService extends BaseService<
       });
 
       // Prepare data for chart
-      let sortedData: { label: string, value: number }[];
+      let sortedData: { label: string; value: number }[];
 
-      if (timeFrame === 'month') {
+      if (timeFrame === "month") {
         // For month, return daily data for the last 30 days
         sortedData = Object.entries(monthlyData)
           .sort(([a], [b]) => a.localeCompare(b))
@@ -1916,8 +2013,12 @@ export default class FeedbackSessionService extends BaseService<
         5: 0,
       };
 
-      sessions.forEach(session => {
-        if (session.pharmacyRating && session.pharmacyRating >= 1 && session.pharmacyRating <= 5) {
+      sessions.forEach((session) => {
+        if (
+          session.pharmacyRating &&
+          session.pharmacyRating >= 1 &&
+          session.pharmacyRating <= 5
+        ) {
           const rating = session.pharmacyRating as 1 | 2 | 3 | 4 | 5;
           ratingCounts[rating]++;
         }
@@ -2127,32 +2228,57 @@ export default class FeedbackSessionService extends BaseService<
         }
       });
 
-      const satisfactionRate = totalRatings > 0 ? Math.round((satisfiedRatings / totalRatings) * 100) : 0;
-      const comparisonSatisfactionRate = comparisonTotalRatings > 0 ?
-        Math.round((comparisonSatisfiedRatings / comparisonTotalRatings) * 100) : 0;
+      const satisfactionRate =
+        totalRatings > 0
+          ? Math.round((satisfiedRatings / totalRatings) * 100)
+          : 0;
+      const comparisonSatisfactionRate =
+        comparisonTotalRatings > 0
+          ? Math.round(
+              (comparisonSatisfiedRatings / comparisonTotalRatings) * 100
+            )
+          : 0;
       const satisfactionChange = satisfactionRate - comparisonSatisfactionRate;
 
       // Count total feedbacks
-      const totalFeedbacks = currentSessions.filter(s =>
-        s.pharmacyRating || (s.employeeRatings && s.employeeRatings.length > 0)
+      const totalFeedbacks = currentSessions.filter(
+        (s) =>
+          s.pharmacyRating ||
+          (s.employeeRatings && s.employeeRatings.length > 0)
       ).length;
 
-      const comparisonTotalFeedbacks = comparisonSessions.filter(s =>
-        s.pharmacyRating || (s.employeeRatings && s.employeeRatings.length > 0)
+      const comparisonTotalFeedbacks = comparisonSessions.filter(
+        (s) =>
+          s.pharmacyRating ||
+          (s.employeeRatings && s.employeeRatings.length > 0)
       ).length;
 
-      const feedbackChange = comparisonTotalFeedbacks > 0 ?
-        Math.round(((totalFeedbacks - comparisonTotalFeedbacks) / comparisonTotalFeedbacks) * 100) : 0;
+      const feedbackChange =
+        comparisonTotalFeedbacks > 0
+          ? Math.round(
+              ((totalFeedbacks - comparisonTotalFeedbacks) /
+                comparisonTotalFeedbacks) *
+                100
+            )
+          : 0;
 
       // Count unique visitors
       const uniqueDeviceIds = new Set(currentSessions.map((s) => s.deviceId));
       const totalVisitors = uniqueDeviceIds.size;
 
-      const comparisonUniqueDeviceIds = new Set(comparisonSessions.map(s => s.deviceId));
+      const comparisonUniqueDeviceIds = new Set(
+        comparisonSessions.map((s) => s.deviceId)
+      );
       const comparisonTotalVisitors = comparisonUniqueDeviceIds.size;
 
-      const visitorsChange = comparisonTotalVisitors > 0 ?
-        Math.round(((totalVisitors - comparisonTotalVisitors) / comparisonTotalVisitors) * 100) : 0;
+      const visitorsChange =
+        comparisonTotalVisitors > 0
+          ? Math.round(
+              ((totalVisitors - comparisonTotalVisitors) /
+                comparisonTotalVisitors) *
+                100
+            )
+          : 0;
 
       // Calculate feedback percentage - Fix to prevent exceeding 100%
       // Count unique devices that have given feedback
@@ -2166,8 +2292,13 @@ export default class FeedbackSessionService extends BaseService<
           .map((s) => s.deviceId)
       );
 
-      const feedbackPercentage = totalVisitors > 0 ?
-        Math.min(100, Math.round((devicesWithFeedback.size / totalVisitors) * 100)) : 0;
+      const feedbackPercentage =
+        totalVisitors > 0
+          ? Math.min(
+              100,
+              Math.round((devicesWithFeedback.size / totalVisitors) * 100)
+            )
+          : 0;
 
       // Same adjustment for comparison period
       const devicesWithFeedbackComparison = new Set(
@@ -2180,16 +2311,25 @@ export default class FeedbackSessionService extends BaseService<
           .map((s) => s.deviceId)
       );
 
-      const comparisonFeedbackPercentage = comparisonTotalVisitors > 0 ?
-        Math.min(100, Math.round((devicesWithFeedbackComparison.size / comparisonTotalVisitors) * 100)) : 0;
+      const comparisonFeedbackPercentage =
+        comparisonTotalVisitors > 0
+          ? Math.min(
+              100,
+              Math.round(
+                (devicesWithFeedbackComparison.size / comparisonTotalVisitors) *
+                  100
+              )
+            )
+          : 0;
 
-      const feedbackPercentageChange = feedbackPercentage - comparisonFeedbackPercentage;
+      const feedbackPercentageChange =
+        feedbackPercentage - comparisonFeedbackPercentage;
 
       // Calculate employee rating statistics
       let totalEmployeeRating = 0;
       let totalEmployeeReviews = 0;
 
-      currentSessions.forEach(session => {
+      currentSessions.forEach((session) => {
         if (session.employeeRatings && session.employeeRatings.length > 0) {
           totalEmployeeReviews += session.employeeRatings.length;
           totalEmployeeRating += session.employeeRatings.reduce(
@@ -2199,13 +2339,15 @@ export default class FeedbackSessionService extends BaseService<
         }
       });
 
-      const employeeAvgRating = totalEmployeeReviews > 0 ?
-        parseFloat((totalEmployeeRating / totalEmployeeReviews).toFixed(1)) : 0;
+      const employeeAvgRating =
+        totalEmployeeReviews > 0
+          ? parseFloat((totalEmployeeRating / totalEmployeeReviews).toFixed(1))
+          : 0;
 
       let comparisonTotalEmployeeRating = 0;
       let comparisonTotalEmployeeReviews = 0;
 
-      comparisonSessions.forEach(session => {
+      comparisonSessions.forEach((session) => {
         if (session.employeeRatings && session.employeeRatings.length > 0) {
           comparisonTotalEmployeeReviews += session.employeeRatings.length;
           comparisonTotalEmployeeRating += session.employeeRatings.reduce(
@@ -2215,26 +2357,57 @@ export default class FeedbackSessionService extends BaseService<
         }
       });
 
-      const comparisonEmployeeAvgRating = comparisonTotalEmployeeReviews > 0 ?
-        parseFloat((comparisonTotalEmployeeRating / comparisonTotalEmployeeReviews).toFixed(1)) : 0;
+      const comparisonEmployeeAvgRating =
+        comparisonTotalEmployeeReviews > 0
+          ? parseFloat(
+              (
+                comparisonTotalEmployeeRating / comparisonTotalEmployeeReviews
+              ).toFixed(1)
+            )
+          : 0;
 
-      const employeeRatingChange = parseFloat((employeeAvgRating - comparisonEmployeeAvgRating).toFixed(1));
+      const employeeRatingChange = parseFloat(
+        (employeeAvgRating - comparisonEmployeeAvgRating).toFixed(1)
+      );
 
-      const employeeReviewChange = comparisonTotalEmployeeReviews > 0 ?
-        Math.round(((totalEmployeeReviews - comparisonTotalEmployeeReviews) / comparisonTotalEmployeeReviews) * 100) : 0;
+      const employeeReviewChange =
+        comparisonTotalEmployeeReviews > 0
+          ? Math.round(
+              ((totalEmployeeReviews - comparisonTotalEmployeeReviews) /
+                comparisonTotalEmployeeReviews) *
+                100
+            )
+          : 0;
 
       // Calculate client completion data
       const startedFeedbacks = currentSessions.length;
-      const completedFeedbacks = currentSessions.filter(s => s.completed).length;
-      const completionRate = startedFeedbacks > 0 ?
-        parseFloat(((completedFeedbacks / startedFeedbacks) * 100).toFixed(1)) : 0;
+      const completedFeedbacks = currentSessions.filter(
+        (s) => s.completed
+      ).length;
+      const completionRate =
+        startedFeedbacks > 0
+          ? parseFloat(
+              ((completedFeedbacks / startedFeedbacks) * 100).toFixed(1)
+            )
+          : 0;
 
       const comparisonStartedFeedbacks = comparisonSessions.length;
-      const comparisonCompletedFeedbacks = comparisonSessions.filter(s => s.completed).length;
-      const comparisonCompletionRate = comparisonStartedFeedbacks > 0 ?
-        parseFloat(((comparisonCompletedFeedbacks / comparisonStartedFeedbacks) * 100).toFixed(1)) : 0;
+      const comparisonCompletedFeedbacks = comparisonSessions.filter(
+        (s) => s.completed
+      ).length;
+      const comparisonCompletionRate =
+        comparisonStartedFeedbacks > 0
+          ? parseFloat(
+              (
+                (comparisonCompletedFeedbacks / comparisonStartedFeedbacks) *
+                100
+              ).toFixed(1)
+            )
+          : 0;
 
-      const completionRateChange = parseFloat((completionRate - comparisonCompletionRate).toFixed(1));
+      const completionRateChange = parseFloat(
+        (completionRate - comparisonCompletionRate).toFixed(1)
+      );
 
       return {
         statsSummary: {
@@ -2472,7 +2645,7 @@ export default class FeedbackSessionService extends BaseService<
     page: number = 1,
     limit: number = 10,
     dateRange?: { start: Date; end: Date }
-  ): Promise<{ suggestions: any[], total: number }> {
+  ): Promise<{ suggestions: any[]; total: number }> {
     try {
       const skip = (page - 1) * limit;
 
@@ -2497,10 +2670,12 @@ export default class FeedbackSessionService extends BaseService<
         .limit(limit);
 
       // Extract and format suggestions
-      const suggestions = sessions.map(session => {
+      const suggestions = sessions.map((session) => {
         const clientName = session.clientData
-          ? `${session.clientData.firstName || ''} ${session.clientData.lastName || ''}`.trim()
-          : 'Anonyme';
+          ? `${session.clientData.firstName || ""} ${
+              session.clientData.lastName || ""
+            }`.trim()
+          : "Anonyme";
 
         return {
           id: session._id.toString(),

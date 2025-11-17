@@ -51,6 +51,7 @@ export default class ReportService extends BaseService<
     employeeId?: string,
     sentimentFilter?: string
   ) {
+    console.log('Sentiment filter:', sentimentFilter);
     try {
       // Create directory if it doesn't exist
       const reportDir = path.join(process.cwd(), 'public', 'reports');
