@@ -563,7 +563,9 @@ export default class FeedbackSessionService extends BaseService<
     page: number = 1,
     limit: number = 10,
     ratingFilter?: string,
-    sentimentFilter: string = "all"
+    sentimentFilter: string = "all",
+    startDate?: Date | null,
+    endDate?: Date | null
   ): Promise<{ ratings: any[]; stats: any; total: number }> {
     try {
       const skip = (page - 1) * limit;
@@ -573,7 +575,9 @@ export default class FeedbackSessionService extends BaseService<
       const now = new Date();
 
       if (timeFilter !== "all") {
-        let startDate = new Date();
+        if (!startDate) {
+          startDate = new Date();
+        }
 
         switch (timeFilter) {
           case "30days":
@@ -589,10 +593,20 @@ export default class FeedbackSessionService extends BaseService<
             startDate.setFullYear(startDate.getFullYear() - 1);
             break;
           case "lastYear":
-            const endDate = new Date();
+            if (!endDate) {
+              endDate = new Date();
+            }
             endDate.setFullYear(endDate.getFullYear() - 1);
             startDate.setFullYear(startDate.getFullYear() - 2);
             dateFilter.lastActiveAt = { $gte: startDate, $lte: endDate };
+            break;
+          case "custom":
+            if (startDate) {
+              dateFilter.lastActiveAt = { $gte: startDate };
+            }
+            if (endDate) {
+              dateFilter.lastActiveAt = { $lte: endDate };
+            }
             break;
           default:
             break;
@@ -670,7 +684,9 @@ export default class FeedbackSessionService extends BaseService<
    * @returns Promise<any> - Statistics for the given time period
    */
   private async calculatePharmacyRatingStats(
-    timeFilter: string = "all"
+    timeFilter: string = "all",
+    startDate?: Date | null,
+    endDate?: Date | null
   ): Promise<any> {
     try {
       // Build the date filter based on timeFilter
@@ -678,7 +694,9 @@ export default class FeedbackSessionService extends BaseService<
       const now = new Date();
 
       if (timeFilter !== "all") {
-        let startDate = new Date();
+        if (!startDate) {
+          startDate = new Date();
+        }
 
         switch (timeFilter) {
           case "30days":
@@ -694,13 +712,22 @@ export default class FeedbackSessionService extends BaseService<
             startDate.setFullYear(startDate.getFullYear() - 1);
             break;
           case "lastYear":
-            const endDate = new Date();
+            if (!endDate) {
+              endDate = new Date();
+            }
             endDate.setFullYear(endDate.getFullYear() - 1);
             startDate.setFullYear(startDate.getFullYear() - 2);
             dateFilter.lastActiveAt = { $gte: startDate, $lte: endDate };
             break;
+          case "custom":
+            if (startDate) {
+              dateFilter.lastActiveAt = { $gte: startDate };
+            }
+            if (endDate) {
+              dateFilter.lastActiveAt = { $lte: endDate };
+            }
+            break;
           default:
-            // No date filter
             break;
         }
 
@@ -838,7 +865,10 @@ export default class FeedbackSessionService extends BaseService<
     employeeId?: string,
     page: number = 1,
     limit: number = 10,
-    sentimentFilter?: string
+    sentimentFilter?: string,
+    startDate?: Date | null,
+    endDate?: Date | null,
+    timeFilter: string = "all"
   ): Promise<{ ratings: any[]; total: number }> {
     try {
       // First find all sessions with employee ratings
@@ -853,6 +883,52 @@ export default class FeedbackSessionService extends BaseService<
             },
           },
         };
+      }
+      
+      const dateFilter: any = {};
+      if (timeFilter !== "all") {
+        if (!startDate) {
+          startDate = new Date();
+        }
+
+        switch (timeFilter) {
+          case "30days":
+            startDate.setDate(startDate.getDate() - 30);
+            break;
+          case "quarter":
+            startDate.setMonth(startDate.getMonth() - 3);
+            break;
+          case "semester":
+            startDate.setMonth(startDate.getMonth() - 6);
+            break;
+          case "year":
+            startDate.setFullYear(startDate.getFullYear() - 1);
+            break;
+          case "lastYear":
+            if (!endDate) {
+              endDate = new Date();
+            }
+            endDate.setFullYear(endDate.getFullYear() - 1);
+            startDate.setFullYear(startDate.getFullYear() - 2);
+            dateFilter.lastActiveAt = { $gte: startDate, $lte: endDate };
+            break;
+          case "custom":
+            if (startDate) {
+              dateFilter.lastActiveAt = { $gte: startDate };
+            }
+            if (endDate) {
+              dateFilter.lastActiveAt = { $lte: endDate };
+            }
+            break;
+          default:
+            break;
+        }
+
+        if (!dateFilter.lastActiveAt) {
+          dateFilter.lastActiveAt = { $gte: startDate };
+        }
+
+        matchFilter = { ...matchFilter, ...dateFilter };
       }
 
       // If sentiment filter provided, integrate it to the query

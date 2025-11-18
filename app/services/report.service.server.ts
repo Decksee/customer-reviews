@@ -330,8 +330,40 @@ export default class ReportService extends BaseService<
           // Set Y position for table content
           doc.y = contentStartY + 10;
           logger.info(`Adding data table at Y position: ${doc.y}`);
-          // Add table with enhanced styling
-          this.addDataTable(doc, data, type, colors, fonts);
+          
+          // Special handling for employee reviews - use grouped structure
+          if (type === 'employee-reviews' || type === 'specific-employee-reviews') {
+            // Group reviews by employee
+            const groupedReviews = this.groupReviewsByEmployee(data);
+            let currentY = doc.y;
+            
+            // Process each employee
+            for (const [employeeName, employeeReviews] of groupedReviews.entries()) {
+              // Check if we need a new page for this employee
+              if (currentY > doc.page.height - 300) {
+                doc.addPage();
+                this.addHeader(doc, reportName, colors as any, fonts as any, dateRange);
+                currentY = 100;
+              }
+              
+              // Draw employee summary
+              currentY = this.drawEmployeeSummary(doc, employeeName, employeeReviews, currentY, colors, fonts);
+              
+              // Get negative reviews for this employee
+              const negativeReviews = this.getNegativeReviews(employeeReviews);
+              
+              // Draw negative reviews table
+              currentY = this.drawNegativeReviewsTable(doc, employeeName, negativeReviews, currentY, colors, fonts);
+              
+              // Add space between employees
+              currentY += 30;
+              doc.y = currentY;
+            }
+          } else {
+            // For other report types, use the standard table
+            this.addDataTable(doc, data, type, colors, fonts);
+          }
+          
           logger.info(`Table complete, Y position now: ${doc.y}`);
         }
 
@@ -1086,6 +1118,252 @@ export default class ReportService extends BaseService<
   }
 
   /**
+   * Draw employee summary section with statistics
+   */
+  private drawEmployeeSummary(
+    doc: PDFKit.PDFDocument,
+    employeeName: string,
+    employeeReviews: any[],
+    yPos: number,
+    colors: any,
+    fonts: any
+  ): number {
+    // Calculate statistics for this employee
+    const avgRating = this.calculateAverageRating(employeeReviews);
+    const totalReviews = employeeReviews.length;
+    const negativeReviews = this.getNegativeReviews(employeeReviews);
+    const negativeCount = negativeReviews.length;
+    const commentsCount = employeeReviews.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
+    
+    // Get rating distribution
+    const ratingDistribution = [0, 0, 0, 0, 0]; // 1-5 stars
+    employeeReviews.forEach(review => {
+      const rating = parseInt(review.rating);
+      if (rating >= 1 && rating <= 5) {
+        ratingDistribution[rating - 1]++;
+      }
+    });
+    
+    // Draw employee name header
+    doc.fontSize(14).font(fonts.bold).fillColor(colors.primary)
+      .text(employeeName, 50, yPos);
+    
+    yPos += 25;
+    
+    // Draw summary container with border
+    const summaryWidth = 500;
+    const summaryHeight = 60;
+    doc.roundedRect(50, yPos, summaryWidth, summaryHeight, 5)
+      .lineWidth(1)
+      .stroke(colors.border);
+    
+    // Add subtle background
+    doc.rect(50, yPos, summaryWidth, summaryHeight)
+      .fill('#F8F9FA');
+    
+    // Create 4-column layout for stats
+    const colWidth = summaryWidth / 4;
+    const stats = [
+      { label: 'Total avis', value: totalReviews.toString(), color: colors.primary },
+      { label: 'Note moyenne', value: `${avgRating}/5`, color: parseFloat(avgRating) >= 4 ? colors.success : (parseFloat(avgRating) >= 3 ? colors.warning : colors.error) },
+      { label: 'Avis négatifs', value: `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`, color: colors.error },
+      { label: 'Avec commentaires', value: `${commentsCount}/${totalReviews}`, color: colors.accent }
+    ];
+    
+    stats.forEach((stat, index) => {
+      const x = 50 + (index * colWidth);
+      this.drawSummaryStat(doc, x + 10, yPos + 15, stat.label, stat.value, stat.color, fonts);
+    });
+    
+    // Add rating distribution bar chart
+    yPos += summaryHeight + 15;
+    
+    doc.fontSize(10).font(fonts.bold).fillColor(colors.text)
+      .text('Répartition des notes:', 50, yPos);
+    
+    yPos += 15;
+    
+    const barWidth = 80;
+    const barHeight = 20;
+    const maxCount = Math.max(...ratingDistribution);
+    
+    ratingDistribution.forEach((count, index) => {
+      const x = 50 + (index * (barWidth + 10));
+      const barFillWidth = maxCount > 0 ? (count / maxCount) * (barWidth - 30) : 0;
+      
+      // Draw bar background
+      // doc.rect(x + 30, yPos, barWidth - 30, barHeight)
+      //   .fill('#E5E7EB');
+      
+      // Draw filled portion
+      // if (barFillWidth > 0) {
+      //   const barColor = index >= 3 ? colors.success : (index >= 2 ? colors.warning : colors.error);
+      //   doc.rect(x + 30, yPos, barFillWidth, barHeight)
+      //     .fill(barColor);
+      // }
+      
+      // Draw star rating label
+      doc.fontSize(9).font(fonts.body).fillColor(colors.text)
+        .text(`${index + 1} étoile`+ (index + 1 === 1 ? ' :' : 's :'), x, yPos + 5);
+      
+      // Draw count
+      doc.fontSize(9).font(fonts.bold).fillColor((index + 1) >= 3 ? colors.success : (index + 1 >= 2 ? colors.warning : colors.error))
+        .text(count.toString(), x + 37, yPos + 5);
+    });
+    
+    return yPos + 40; // Return new Y position
+  }
+
+  /**
+   * Draw negative reviews table for an employee
+   */
+  private drawNegativeReviewsTable(
+    doc: PDFKit.PDFDocument,
+    employeeName: string,
+    negativeReviews: any[],
+    yPos: number,
+    colors: any,
+    fonts: any
+  ): number {
+    if (negativeReviews.length === 0) {
+      doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText)
+        .text('Aucun avis négatif trouvé pour cet employé.', 50, yPos);
+      return yPos + 20;
+    }
+    
+    // Draw section title
+    doc.fontSize(12).font(fonts.bold).fillColor(colors.text)
+      .text(`Avis négatifs - ${employeeName} (${negativeReviews.length})`, 50, yPos);
+    
+    yPos += 20;
+    
+    // Table setup
+    const tableWidth = 500;
+    const colWidths = [80, 60, 60, 300]; // Date, Note, Client, Commentaire
+    const xPos = 50;
+    
+    // Draw table header
+    const headerHeight = 30;
+    doc.rect(xPos, yPos, tableWidth, headerHeight)
+      .fill(colors.primary);
+    
+    // Draw headers
+    doc.fillColor('white').fontSize(10).font(fonts.bold);
+    const headers = ['Date', 'Note', 'Client', 'Commentaire'];
+    headers.forEach((header, i) => {
+      let xOffset = xPos;
+      for (let j = 0; j < i; j++) {
+        xOffset += colWidths[j];
+      }
+      doc.text(header, xOffset + 5, yPos + 10, {
+        width: colWidths[i] - 10,
+        align: 'center'
+      });
+    });
+    
+    yPos += headerHeight;
+    
+    // Draw table rows
+    negativeReviews.forEach((review, index) => {
+      const rowHeight = 25;
+      
+      // Alternate row colors
+      if (index % 2 === 0) {
+        doc.rect(xPos, yPos, tableWidth, rowHeight)
+          .fill('#FEF2F2');
+      }
+      
+      // Draw borders
+      doc.rect(xPos, yPos, tableWidth, rowHeight)
+        .lineWidth(0.5)
+        .stroke(colors.border);
+      
+      // Format row data
+      const rowData = [
+        review.date || '-',
+        review.rating || '-',
+        review.client || 'Client anonyme',
+        (review.comment && review.comment.length > 80) ? `${review.comment.substring(0, 77)}...` : (review.comment || '-')
+      ];
+      
+      // Draw cell content
+      doc.fontSize(9).font(fonts.body).fillColor(colors.text);
+      rowData.forEach((cell, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(cell, xOffset + 5, yPos + 5, {
+          width: colWidths[i] - 10,
+          align: 'center'
+        });
+      });
+      
+      // Draw horizontal divider between rows - more subtle than full grid
+      doc.lineWidth(0.2).strokeColor(colors.border);
+      doc.moveTo(xPos, yPos + rowHeight)
+        .lineTo(xPos + tableWidth, yPos + rowHeight)
+        .stroke();
+
+      // Draw column separators - subtle vertical lines
+      let xLine = xPos;
+      for (let i = 1; i < 4; i++) {
+        xLine += colWidths[i - 1];
+        doc.moveTo(xLine, yPos)
+          .lineTo(xLine, yPos + rowHeight)
+          .stroke();
+      }
+
+      yPos += rowHeight;
+
+    });
+    
+    return yPos + 10;
+  }
+
+  /**
+   * Group employee reviews by employee name
+   */
+  private groupReviewsByEmployee(reviews: any[]): Map<string, any[]> {
+    const groupedReviews = new Map<string, any[]>();
+    
+    reviews.forEach(review => {
+      let employeeName = 'Employé inconnu';
+      
+      // Extract employee name from different possible formats
+      if (review.employee) {
+        if (typeof review.employee === 'string') {
+          employeeName = review.employee;
+        } else if (review.employee.firstName || review.employee.lastName) {
+          employeeName = `${review.employee.lastName || ''} ${review.employee.firstName || ''}`.trim();
+        }
+      } else if (review.employeeName) {
+        employeeName = review.employeeName;
+      }
+      
+      // Create array for this employee if it doesn't exist
+      if (!groupedReviews.has(employeeName)) {
+        groupedReviews.set(employeeName, []);
+      }
+      
+      // Add review to employee's array
+      groupedReviews.get(employeeName)!.push(review);
+    });
+    
+    return groupedReviews;
+  }
+
+  /**
+   * Get negative reviews (rating <= 2) from a list of reviews
+   */
+  private getNegativeReviews(reviews: any[]): any[] {
+    return reviews.filter(review => {
+      const rating = parseFloat(review.rating);
+      return !isNaN(rating) && rating <= 2;
+    });
+  }
+
+  /**
    * Calculate average rating from data array
    */
   private calculateAverageRating(data: any[]): string {
@@ -1159,56 +1437,189 @@ export default class ReportService extends BaseService<
       // Add some space
       worksheet.addRow([]);
 
-      // Add headers
-      const headings = this.getReportHeadings(type);
-      const headerRow = worksheet.addRow(headings);
-      headerRow.font = { bold: true };
+      // Special handling for employee reviews - use grouped structure
+      if (type === 'employee-reviews' || type === 'specific-employee-reviews') {
+        // Group reviews by employee
+        const groupedReviews = this.groupReviewsByEmployee(data);
+        let currentRow = 6; // Start after title and headers
+        
+        // Process each employee
+        for (const [employeeName, employeeReviews] of groupedReviews.entries()) {
+          // Add employee name as a section header
+          worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+          const employeeHeaderCell = worksheet.getCell(`A${currentRow}`);
+          employeeHeaderCell.value = `Employé: ${employeeName}`;
+          employeeHeaderCell.font = { size: 14, bold: true, color: { argb: 'FF1C7B80' } };
+          employeeHeaderCell.alignment = { horizontal: 'left' };
+          currentRow++;
+          
+          // Add summary statistics for this employee
+          const avgRating = this.calculateAverageRating(employeeReviews);
+          const totalReviews = employeeReviews.length;
+          const negativeReviews = this.getNegativeReviews(employeeReviews);
+          const negativeCount = negativeReviews.length;
+          const commentsCount = employeeReviews.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
+          
+          // Add summary row
+          const summaryData = [
+            'Total avis', totalReviews.toString(),
+            'Note moyenne', avgRating,
+            'Avis négatifs', `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`,
+            'Avec commentaires', `${commentsCount}/${totalReviews}`
+          ];
+          
+          // Add summary in two columns
+          for (let i = 0; i < summaryData.length; i += 2) {
+            const summaryRow = worksheet.addRow([summaryData[i], summaryData[i + 1]]);
+            summaryRow.eachCell((cell) => {
+              cell.font = { bold: true };
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF0F8FF' } // Light blue background
+              };
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+            });
+            currentRow++;
+          }
+          
+          // Add space
+          worksheet.addRow([]);
+          currentRow++;
+          
+          // Add negative reviews section header
+          if (negativeReviews.length > 0) {
+            worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            const negativeHeaderCell = worksheet.getCell(`A${currentRow}`);
+            negativeHeaderCell.value = `Avis négatifs (${negativeReviews.length})`;
+            negativeHeaderCell.font = { size: 12, bold: true, color: { argb: 'FFD32F2F' } };
+            negativeHeaderCell.alignment = { horizontal: 'left' };
+            currentRow++;
+            
+            // Add headers for negative reviews table
+            const negativeHeaders = ['Date', 'Note', 'Client', 'Commentaire'];
+            const negativeHeaderRow = worksheet.addRow(negativeHeaders);
+            negativeHeaderRow.font = { bold: true };
+            negativeHeaderRow.eachCell((cell) => {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFD32F2F' } // Red background
+              };
+              cell.font = {
+                bold: true,
+                color: { argb: 'FFFFFFFF' } // White text
+              };
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+              cell.alignment = {
+                horizontal: 'center',
+                vertical: 'middle'
+              };
+            });
+            currentRow++;
+            
+            // Add negative reviews data
+            negativeReviews.forEach(review => {
+              const negativeRowData = [
+                review.date || '-',
+                review.rating || '-',
+                review.client || 'Client anonyme',
+                review.comment || '-'
+              ];
+              const negativeRow = worksheet.addRow(negativeRowData);
+              negativeRow.eachCell((cell, colNumber) => {
+                cell.border = {
+                  top: { style: 'thin' },
+                  left: { style: 'thin' },
+                  bottom: { style: 'thin' },
+                  right: { style: 'thin' }
+                };
+                if (colNumber <= 2) {
+                  cell.alignment = { horizontal: 'center' };
+                } else {
+                  cell.alignment = { horizontal: 'left', wrapText: true };
+                }
+              });
+              currentRow++;
+            });
+          } else {
+            // No negative reviews message
+            worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+            const noNegativeCell = worksheet.getCell(`A${currentRow}`);
+            noNegativeCell.value = 'Aucun avis négatif trouvé pour cet employé.';
+            noNegativeCell.font = { italic: true, color: { argb: 'FF757575' } };
+            noNegativeCell.alignment = { horizontal: 'center' };
+            currentRow++;
+          }
+          
+          // Add space between employees
+          worksheet.addRow([]);
+          worksheet.addRow([]);
+          currentRow += 2;
+        }
+      } else {
+        // Standard table for other report types
+        // Add headers
+        const headings = this.getReportHeadings(type);
+        const headerRow = worksheet.addRow(headings);
+        headerRow.font = { bold: true };
 
-      // Style header row
-      headerRow.eachCell((cell) => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF1C7B80' } // Primary color
-        };
-        cell.font = {
-          bold: true,
-          color: { argb: 'FFFFFFFF' } // White text
-        };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-        cell.alignment = {
-          horizontal: 'center',
-          vertical: 'middle'
-        };
-      });
-
-      // Add data rows
-      for (const row of data) {
-        const rowData = this.formatRowData(row, type);
-        const excelRow = worksheet.addRow(rowData);
-
-        // Style data rows
-        excelRow.eachCell((cell, colNumber) => {
-          // Add borders
+        // Style header row
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1C7B80' } // Primary color
+          };
+          cell.font = {
+            bold: true,
+            color: { argb: 'FFFFFFFF' } // White text
+          };
           cell.border = {
             top: { style: 'thin' },
             left: { style: 'thin' },
             bottom: { style: 'thin' },
             right: { style: 'thin' }
           };
-
-          // Align based on content
-          if (typeof cell.value === 'number' || (typeof cell.value === 'string' && cell.value.length < 5)) {
-            cell.alignment = { horizontal: 'center' };
-          } else {
-            cell.alignment = { horizontal: 'left', wrapText: true };
-          }
+          cell.alignment = {
+            horizontal: 'center',
+            vertical: 'middle'
+          };
         });
+
+        // Add data rows
+        for (const row of data) {
+          const rowData = this.formatRowData(row, type);
+          const excelRow = worksheet.addRow(rowData);
+
+          // Style data rows
+          excelRow.eachCell((cell, colNumber) => {
+            // Add borders
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+
+            // Align based on content
+            if (typeof cell.value === 'number' || (typeof cell.value === 'string' && cell.value.length < 5)) {
+              cell.alignment = { horizontal: 'center' };
+            } else {
+              cell.alignment = { horizontal: 'left', wrapText: true };
+            }
+          });
+        }
       }
 
       // Set column widths based on content type
