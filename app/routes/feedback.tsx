@@ -2,8 +2,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { data, useNavigate, useFetcher, Link } from "react-router"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
@@ -15,6 +14,8 @@ import { getDeviceIdentifier, isBrowser } from "~/utils/browser.client"
 import { userService } from "~/services/user.service.server"
 import { serializeDocuments } from "~/core/db/utils"
 import { settingsService } from "~/services/settings.service.server"
+import EmojiRating from "~/components/feedback/emoji-rating"
+import StarRating from "~/components/feedback/star-rating"
 
 const STALE_THRESHOLD_MS = 2 * 60 * 1000;
 
@@ -27,47 +28,11 @@ type FeedbackData = {
   lastActiveAt?: string;
 }
 
-const emojis = [
-  {
-    value: 1,
-    color: "#EF4444",
-    emoji: "😞",
-    label: "Très insatisfait",
-  },
-  {
-    value: 2,
-    color: "#F97316",
-    emoji: "😕",
-    label: "Insatisfait",
-  },
-  {
-    value: 3,
-    color: "#EAB308",
-    emoji: "😐",
-    label: "Neutre",
-  },
-  {
-    value: 4,
-    color: "#84CC16",
-    emoji: "🙂",
-    label: "Satisfait",
-  },
-  {
-    value: 5,
-    color: "#22C55E",
-    emoji: "😃",
-    label: "Très satisfait",
-  },
-]
-
-const feedbackOptions = [
-  "Accueillant",
-  "À l'écoute",
-  "Rapide",
-  "Souriant",
-  "Patient",
-  "Attentif"
-]
+const feedbackOptionsByRating = {
+  low: ["Lent", "Froid", "Distrait", "Brusque", "Absent"],
+  medium: ["Correct", "Rapide", "Poli", "Efficace", "Attentif"],
+  high: ["Parfait", "Souriant", "Pro", "Génial", "Top"]
+}
 
 export async function loader() {
   const employees = await userService.readMany({
@@ -106,743 +71,211 @@ export const links = () => [
   { rel: "preload", href: "/images/rh.mp4", as: "video", type: "video/mp4" }
 ];
 
-// const EmojiRating = ({ onChange, initialValue }: any) => {
-//   const [selected, setSelected] = useState(initialValue)
-
-//   useEffect(() => {
-//     setSelected(initialValue)
-//   }, [initialValue])
-
-//   return (
-//     <div className="flex justify-center items-center gap-4">
-//       {emojis.map((item) => {
-//         const isSelected = selected === item.value
-//         return (
-//           <div key={item.value} className="flex flex-col items-center">
-//             <button
-//               type="button"
-//               onClick={() => {
-//                 setSelected(item.value)
-//                 onChange(item.value)
-//               }}
-//               className={`w-16 h-16 md:w-20 md:h-20 text-4xl rounded-full transition-all duration-300 ${isSelected && "ring-4 ring-offset-4 ring-gray-400"
-//                 }`}
-//               style={{ backgroundColor: item.color }}
-//               title={item.label}
-//               aria-label={item.label}
-//             >{item.emoji}
-//             </button>
-//             {isSelected && (
-//               <span className="text-sm mt-5 font-medium text-gray-700">
-//                 {item.label}
-//               </span>
-//             )}
-//           </div>
-//         )
-//       })}
-//     </div>
-//   )
-// }
-
-const EmojiRating = ({ onChange, initialValue }: { onChange: (rating: number) => void, initialValue: number | null }) => {
-  const [selected, setSelected] = useState<number | null>(initialValue)
-  const [animationFace, setAnimationFace] = useState<number | null>(null)
-
-  // Function to run animation on a specific face
-  const runFaceAnimation = (value: number) => {
-    // Start new animation (no need to reset first, just override)
-    setAnimationFace(value)
-
-    // Auto stop animation after completion
-    setTimeout(() => {
-      if (animationFace === value) {
-        setAnimationFace(null)
-      }
-    }, 800)
-  }
-
-  // Update selected state if initialValue changes
-  useEffect(() => {
-    console.log("EmojiRating initialValue updated:", initialValue);
-    setSelected(initialValue);
-  }, [initialValue]);
-
-  const emojis = [
-    {
-      value: 1,
-      bgGradient: "bg-gradient-to-br from-red-400 via-red-500 to-red-700",
-      topGradient: "bg-gradient-to-br from-red-300 via-red-400 to-red-600",
-      shadowColor: "shadow-red-600/60",
-      glowColor: "drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]",
-      ringColor: "ring-red-400",
-      initialRotation: { rotateX: 0, rotateY: 0 },
-      label: "Très insatisfait",
-      face: ({ isAnimating }: { isAnimating: boolean }) => (
-        <motion.div
-          className="flex items-center justify-center h-full w-full relative z-10"
-          animate={isAnimating ? {
-            rotateY: [-15, 15, -15, 0],
-            rotateX: [-10, 10, -10, 0]
-          } : { rotateY: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex flex-col items-center justify-center transform-gpu">
-            <div className="flex space-x-3 mb-1">
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  scaleY: [1, 0.3, 1],
-                  rotateX: [0, 90, 0]
-                } : { scaleY: 1, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  scaleY: [1, 0.3, 1],
-                  rotateX: [0, 90, 0]
-                } : { scaleY: 1, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-            </div>
-            <motion.div
-              className="w-6 h-2 mt-1.5 rounded-full border-2 border-white border-b-0 rounded-t-none shadow-lg bg-gradient-to-b from-white/20 to-transparent"
-              animate={isAnimating ? {
-                scaleX: [1, 1.5, 1],
-                rotateX: [0, 15, 0]
-              } : { scaleX: 1, rotateX: 0 }}
-              transition={{ duration: 0.6 }}
-              style={{ transformStyle: "preserve-3d" }}
-            ></motion.div>
-          </div>
-        </motion.div>
-      ),
-    },
-    {
-      value: 2,
-      bgGradient: "bg-gradient-to-br from-orange-400 via-orange-500 to-orange-700",
-      topGradient: "bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600",
-      shadowColor: "shadow-orange-600/60",
-      glowColor: "drop-shadow-[0_0_15px_rgba(251,146,60,0.6)]",
-      ringColor: "ring-orange-400",
-      initialRotation: { rotateX: 0, rotateY: 0 },
-      label: "Insatisfait",
-      face: ({ isAnimating }: { isAnimating: boolean }) => (
-        <motion.div
-          className="flex items-center justify-center h-full w-full relative z-10"
-          animate={isAnimating ? {
-            rotateY: [-15, 15, -15, 0],
-            rotateX: [-10, 10, -10, 0]
-          } : { rotateY: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex flex-col items-center justify-center transform-gpu">
-            <div className="flex space-x-3 mb-1">
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  y: [0, 2, 0],
-                  rotateX: [0, 45, 0]
-                } : { y: 0, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  y: [0, 2, 0],
-                  rotateX: [0, 45, 0]
-                } : { y: 0, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-            </div>
-            <motion.div
-              className="w-6 h-2 mt-1.5 rounded-full border-2 border-white border-t-0 rounded-b-none shadow-lg bg-gradient-to-t from-white/20 to-transparent"
-              animate={isAnimating ? {
-                scaleX: [1, 1.5, 1],
-                rotateX: [0, -15, 0]
-              } : { scaleX: 1, rotateX: 0 }}
-              transition={{ duration: 0.6 }}
-              style={{ transformStyle: "preserve-3d" }}
-            ></motion.div>
-          </div>
-        </motion.div>
-      ),
-    },
-    {
-      value: 3,
-      bgGradient: "bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600",
-      topGradient: "bg-gradient-to-br from-yellow-200 via-yellow-300 to-yellow-500",
-      shadowColor: "shadow-yellow-600/60",
-      glowColor: "drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]",
-      ringColor: "ring-yellow-300",
-      initialRotation: { rotateX: 0, rotateY: 0 },
-      label: "Neutre",
-      face: ({ isAnimating }: { isAnimating: boolean }) => (
-        <motion.div
-          className="flex items-center justify-center h-full w-full relative z-10"
-          animate={isAnimating ? {
-            rotateY: [-10, 10, -10, 0],
-            rotateX: [-5, 5, -5, 0]
-          } : { rotateY: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex flex-col items-center justify-center transform-gpu">
-            <div className="flex space-x-3 mb-1">
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  scale: [1, 1.5, 1],
-                  rotateZ: [0, 360, 0]
-                } : { scale: 1, rotateZ: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  scale: [1, 1.5, 1],
-                  rotateZ: [0, 360, 0]
-                } : { scale: 1, rotateZ: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-            </div>
-            <motion.div
-              className="w-6 h-1.5 mt-2 bg-white rounded-full shadow-lg border border-white/30 bg-gradient-to-b from-white to-white/80"
-              animate={isAnimating ? {
-                scaleX: [1, 1.5, 1],
-                rotateY: [0, 15, 0]
-              } : { scaleX: 1, rotateY: 0 }}
-              transition={{ duration: 0.6 }}
-              style={{ transformStyle: "preserve-3d" }}
-            ></motion.div>
-          </div>
-        </motion.div>
-      ),
-    },
-    {
-      value: 4,
-      bgGradient: "bg-gradient-to-br from-lime-400 via-lime-500 to-lime-700",
-      topGradient: "bg-gradient-to-br from-lime-300 via-lime-400 to-lime-600",
-      shadowColor: "shadow-lime-600/60",
-      glowColor: "drop-shadow-[0_0_15px_rgba(132,204,22,0.6)]",
-      ringColor: "ring-lime-400",
-      initialRotation: { rotateX: 5, rotateY: 10 },
-      label: "Satisfait",
-      face: ({ isAnimating }: { isAnimating: boolean }) => (
-        <motion.div
-          className="flex items-center justify-center h-full w-full relative z-10"
-          animate={isAnimating ? {
-            rotateY: [-10, 10, -10, 0],
-            rotateX: [-5, 5, -5, 0]
-          } : { rotateY: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex flex-col items-center justify-center transform-gpu">
-            <div className="flex space-x-3 mb-1">
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  y: [0, -2, 0],
-                  rotateX: [0, -45, 0]
-                } : { y: 0, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={isAnimating ? {
-                  y: [0, -2, 0],
-                  rotateX: [0, -45, 0]
-                } : { y: 0, rotateX: 0 }}
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-            </div>
-            <motion.div
-              className="w-6 h-2 mt-1.5 rounded-full border-2 border-white border-b-0 rounded-t-none transform rotate-180 shadow-lg bg-gradient-to-b from-white/20 to-transparent"
-              animate={isAnimating ? {
-                scaleX: [1, 1.5, 1],
-                rotateX: [180, 195, 180]
-              } : { scaleX: 1, rotateX: 180 }}
-              transition={{ duration: 0.6 }}
-              style={{ transformStyle: "preserve-3d" }}
-            ></motion.div>
-          </div>
-        </motion.div>
-      ),
-    },
-    {
-      value: 5,
-      bgGradient: "bg-gradient-to-br from-green-400 via-green-500 to-green-700",
-      topGradient: "bg-gradient-to-br from-green-300 via-green-400 to-green-600",
-      shadowColor: "shadow-green-600/60",
-      glowColor: "drop-shadow-[0_0_15px_rgba(34,197,94,0.6)]",
-      ringColor: "ring-green-400",
-      initialRotation: { rotateX: 8, rotateY: -12 },
-      label: "Très satisfait",
-      face: ({ isAnimating }: { isAnimating: boolean }) => (
-        <motion.div
-          className="flex items-center justify-center h-full w-full relative z-10"
-          animate={isAnimating ? {
-            rotateY: [-15, 15, -15, 0],
-            rotateX: [-10, 10, -10, 0]
-          } : { rotateY: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex flex-col items-center justify-center transform-gpu">
-            <div className="flex space-x-3 mb-1">
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={
-                  isAnimating
-                    ? {
-                      scale: [1, 1.5, 1],
-                      y: [0, -2, 0],
-                      rotateZ: [0, 360, 0]
-                    }
-                    : { scale: 1, y: 0, rotateZ: 0 }
-                }
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-              <motion.div
-                className="w-2.5 h-2.5 rounded-full bg-white shadow-lg border border-white/50"
-                animate={
-                  isAnimating
-                    ? {
-                      scale: [1, 1.5, 1],
-                      y: [0, -2, 0],
-                      rotateZ: [0, 360, 0]
-                    }
-                    : { scale: 1, y: 0, rotateZ: 0 }
-                }
-                transition={{ duration: 0.6, repeat: isAnimating ? 1 : 0 }}
-                style={{ transformStyle: "preserve-3d" }}
-              ></motion.div>
-            </div>
-            <motion.div
-              className="w-7 h-3 mt-1 border-2 border-white border-t-0 rounded-b-full shadow-lg bg-gradient-to-b from-white/20 to-transparent"
-              animate={isAnimating ? {
-                scaleX: [1, 1.5, 1],
-                rotateX: [0, 15, 0]
-              } : { scaleX: 1, rotateX: 0 }}
-              transition={{ duration: 0.6 }}
-              style={{ transformStyle: "preserve-3d" }}
-            ></motion.div>
-          </div>
-        </motion.div>
-      ),
-    },
-  ]
-
-  return (
-    <div className="flex justify-between items-center gap-3 md:gap-5" style={{ perspective: "1000px" }}>
-      {emojis.map((item) => {
-        const isSelected = selected === item.value
-        const isAnimating = animationFace === item.value
-        const Face = item.face
-
-        return (
-          <motion.div
-            key={item.value}
-            className="flex flex-col items-center"
-            whileHover={{
-              scale: 1.1,
-              y: -12,
-              rotateX: item.initialRotation.rotateX - 5,
-              rotateY: item.initialRotation.rotateY + 5
-            }}
-            whileTap={{
-              scale: 0.95,
-              y: 2,
-              rotateX: item.initialRotation.rotateX + 10,
-              rotateY: item.initialRotation.rotateY - 5
-            }}
-            initial={{
-              opacity: 0.8,
-              y: 20,
-              scale: 0.9,
-              rotateX: item.initialRotation.rotateX,
-              rotateY: item.initialRotation.rotateY
-            }}
-            animate={{
-              scale: isSelected ? 1.2 : 1,
-              opacity: isSelected ? 1 : isAnimating ? 0.95 : 0.85,
-              y: isSelected ? -8 : 0,
-              rotateX: isSelected ? item.initialRotation.rotateX - 10 : item.initialRotation.rotateX,
-              rotateY: isSelected ? item.initialRotation.rotateY + 5 : item.initialRotation.rotateY,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 20,
-              delay: item.value * 0.08,
-            }}
-            onHoverStart={() => runFaceAnimation(item.value)}
-            onHoverEnd={() => {
-              if (animationFace === item.value) {
-                setAnimationFace(null)
-              }
-            }}
-            style={{ transformStyle: "preserve-3d" }}
-          >
-            <motion.button
-              type="button"
-              onClick={() => {
-                const newValue = item.value;
-                console.log(`Setting emoji to: ${newValue}`);
-                setSelected(newValue);
-                onChange(newValue);
-                runFaceAnimation(newValue);
-
-                // Add haptic feedback if available
-                if (isBrowser && 'vibrate' in navigator) {
-                  navigator.vibrate(50)
-                }
-
-                console.log(`Selected pharmacy rating: ${newValue}`);
-              }}
-              className={`relative w-16 h-16 md:w-20 md:h-20 lg:w-18 lg:h-18 xl:w-22 xl:h-22 rounded-full overflow-hidden ${isSelected
-                ? `ring-4 ring-offset-4 ${item.ringColor} ${item.shadowColor} shadow-2xl`
-                : isAnimating
-                  ? `ring-2 ring-offset-2 ${item.ringColor} ${item.shadowColor} shadow-xl`
-                  : `${item.shadowColor} shadow-lg hover:shadow-xl`
-                } focus:outline-none focus:ring-4 focus:ring-offset-4 focus:${item.ringColor} transition-all duration-300 ease-in-out touch-manipulation transform-gpu`}
-              title={item.label}
-              aria-label={item.label}
-              aria-pressed={isSelected}
-              style={{
-                transformStyle: "preserve-3d",
-                filter: isSelected ? item.glowColor : undefined
-              }}
-              animate={{
-                rotateX: isSelected ? item.initialRotation.rotateX - 15 : item.initialRotation.rotateX,
-                rotateY: isSelected ? item.initialRotation.rotateY + 8 : item.initialRotation.rotateY,
-                boxShadow: isSelected
-                  ? `
-                    0 25px 50px -12px rgba(0,0,0,0.25),
-                    0 0 40px rgba(59, 130, 246, 0.3),
-                    inset 0 2px 4px rgba(255,255,255,0.1),
-                    inset 0 -2px 4px rgba(0,0,0,0.1)
-                  `
-                  : `
-                    0 8px 25px -8px rgba(0,0,0,0.15),
-                    inset 0 1px 2px rgba(255,255,255,0.1),
-                    inset 0 -1px 2px rgba(0,0,0,0.05)
-                  `,
-              }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* 3D Base Layer (Back/Bottom) */}
-              <div
-                className={`absolute inset-1 rounded-full ${item.bgGradient}`}
-                style={{
-                  transform: "translateZ(-4px)",
-                  transformStyle: "preserve-3d"
-                }}
-              />
-
-              {/* 3D Top Layer (Front/Top) */}
-              <div
-                className={`absolute inset-0 rounded-full ${item.topGradient} border border-white/20`}
-                style={{
-                  transform: "translateZ(2px)",
-                  transformStyle: "preserve-3d"
-                }}
-              />
-
-              {/* Lighting Effect */}
-              <div
-                className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 via-transparent to-black/10"
-                style={{
-                  transform: "translateZ(3px)",
-                  transformStyle: "preserve-3d"
-                }}
-              />
-
-              {/* Shimmer effect overlay for selected state */}
-              <motion.div
-                className="absolute inset-0 rounded-full opacity-0"
-                style={{
-                  background: "linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%)",
-                  transform: "translateZ(4px)",
-                  transformStyle: "preserve-3d"
-                }}
-                animate={isSelected ? {
-                  opacity: [0, 1, 0],
-                  x: ["-100%", "100%"],
-                } : {}}
-                transition={{
-                  duration: 2,
-                  repeat: isSelected ? Infinity : 0,
-                  repeatDelay: 1,
-                }}
-              />
-
-              {/* 3D Pulse effect for selected state */}
-              {isSelected && (
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-white/40"
-                  style={{
-                    transform: "translateZ(5px)",
-                    transformStyle: "preserve-3d"
-                  }}
-                  animate={{
-                    scale: [1, 1.3, 1],
-                    opacity: [0.6, 0, 0.6],
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-              )}
-
-              {/* Face content with 3D positioning */}
-              <div
-                className="relative w-full h-full flex items-center justify-center"
-                style={{
-                  transform: "translateZ(4px)",
-                  transformStyle: "preserve-3d"
-                }}
-              >
-                <Face isAnimating={isAnimating} />
-              </div>
-            </motion.button>
-
-            <motion.span
-              className={`text-xs md:text-sm mt-3 text-center transition-all duration-300 px-3 py-1.5 rounded-full backdrop-blur-sm ${isSelected
-                ? "font-bold text-gray-900 bg-white/30 shadow-lg border border-white/40"
-                : "font-medium text-gray-700 bg-white/10"
-                }`}
-              animate={{
-                scale: isSelected ? 1.1 : 1,
-                y: isSelected ? -4 : 0,
-                rotateX: isSelected ? -5 : 0,
-              }}
-              style={{ transformStyle: "preserve-3d" }}
-              transition={{ duration: 0.3 }}
-            >
-              {item.label}
-            </motion.span>
-          </motion.div>
-        )
-      })}
-    </div>
-  )
-}
-
-// Enhanced Star rating component for employees
-const StarRating = ({
-  id,
-  onChange,
-  initialValue = 0,
-  className = ""
-}: {
-  id: string
-  onChange: (rating: number) => void
-  initialValue?: number
-  className?: string
-}) => {
-  const [rating, setRating] = useState(initialValue)
-  const [hover, setHover] = useState(0)
-  const [animateIndex, setAnimateIndex] = useState<number | null>(null)
-
-  // Update rating if initialValue changes
-  useEffect(() => {
-    setRating(initialValue);
-  }, [initialValue]);
-
-  // Function to handle star selection with animation sequence
-  const handleStarClick = (value: number) => {
-    // If selecting the same rating, clear it
-    if (value === rating) {
-      setRating(0)
-      onChange(0)
-      return
-    }
-
-    // Animate stars in sequence
-    for (let i = 1; i <= value; i++) {
-      setTimeout(
-        () => {
-          setAnimateIndex(i)
-          // Clear animation state after animation completes
-          setTimeout(() => {
-            if (i === value) {
-              setAnimateIndex(null)
-            }
-          }, 300)
-        },
-        (i - 1) * 100,
-      )
-    }
-
-    if (typeof (window as any).pauseScrollTemporarily === 'function') {
-      (window as any).pauseScrollTemporarily();
-    }
-
-    setRating(value)
-    onChange(value)
-
-    // Add haptic feedback if available
-    if (isBrowser && 'vibrate' in navigator) {
-      navigator.vibrate(50)
-    }
-  }
-
-  // Labels for accessibility and tooltips
-  const ratingLabels = ["Non évalué", "Très insatisfait", "Insatisfait", "Neutre", "Satisfait", "Très satisfait"]
-
-  return (
-    <div className={`flex flex-col ${className}`}>
-      <div className="flex gap-1" role="radiogroup" aria-label="Évaluation par étoiles">
-        {[...Array(5)].map((_, index) => {
-          const starValue = index + 1
-          const isActive = starValue <= (hover || rating)
-          const isAnimating = animateIndex === starValue
-
-          return (
-            <motion.button
-              key={starValue}
-              type="button"
-              className={`font-extrabold text-4xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-blue-500 px-1 py-1 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center ${isActive ? "text-[#217E82]" : "text-[#D9D9D9]"
-                }`}
-              onClick={() => handleStarClick(starValue)}
-              onMouseEnter={() => setHover(starValue)}
-              onMouseLeave={() => setHover(0)}
-              onFocus={() => setHover(starValue)}
-              onBlur={() => setHover(0)}
-              // whileHover={{ scale: 1.2 }}
-              // whileTap={{ scale: 0.9 }}
-              // initial={{ scale: 1 }}
-              // animate={{
-              //   scale: isAnimating ? [1, 1.5, 1] : isActive ? 1.1 : 1,
-              //   rotate: isAnimating ? [0, 15, 0] : 0,
-              // }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 17,
-              }}
-              title={ratingLabels[starValue]}
-              aria-label={ratingLabels[starValue]}
-              role="radio"
-              aria-checked={rating === starValue}
-            >
-              ⭑
-            </motion.button>
-          )
-        })}
-      </div>
-
-      <AnimatePresence>
-        {rating > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            className="text-sm text-gray-600 dark:text-gray-300"
-          >
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// Employee card component with animations
-const EmployeeCard = ({
+const EmployeeCardExpanded = ({
   employee,
   employeeId,
+  isSelected,
   onRatingChange,
   onCommentChange,
   initialRating = 0,
   initialComment = "",
+  onClick,
+  onClose
 }: {
   employee: any
   employeeId: string
+  isSelected: boolean
   onRatingChange: (id: string, rating: number) => void
   onCommentChange: (id: string, comment: string) => void
   initialRating?: number
   initialComment?: string
+  onClick: () => void
+  onClose: () => void
 }) => {
+  const [showCustomComment, setShowCustomComment] = useState(false);
+  const [customComment, setCustomComment] = useState(initialComment);
 
+  const getFeedbackOptions = () => {
+    if (initialRating === 0) return [];
+    if (initialRating <= 2) return feedbackOptionsByRating.low;
+    if (initialRating <= 4) return feedbackOptionsByRating.medium;
+    return feedbackOptionsByRating.high;
+  };
+
+  const currentOptions = getFeedbackOptions();
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        width: isSelected ? 'auto' : '200px'
+      }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      className="rounded-md dark:border-gray-700 dark:bg-gray-800 transition-shadow duration-200"
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="rounded-2xl dark:border-gray-700 dark:bg-gray-800 transition-shadow duration-200 relative shadow-sm"
     >
-      <div className="border border-gray-200 rounded-lg p-4 pb-2 bg-white shadow-sm">
-        <div className="flex gap-4 mb-3">
-          <div className="w-[190px] h-[200px] flex-shrink-0">
-            <Avatar className="h-full w-full dark:border-blue-700 transition-all duration-300 hover:border-blue-400 !rounded-md">
+      <AnimatePresence>
+        {isSelected && (
+          <motion.button
+            onClick={onClose}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-2 right-2 z-10 w-10 h-10 cursor-pointer flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-gray-100 transition-all duration-200"
+            aria-label="Fermer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#FF0000]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        layout
+        className="border border-gray-200 rounded-2xl p-2 pb-2 bg-white"
+      >
+        <motion.div layout className="flex gap-4">
+          <motion.div
+            layout
+            onClick={onClick}
+            className="cursor-pointer relative rounded-2xl overflow-hidden shadow-sm hover:shadow-sm transition-all duration-300"
+          >
+            <Avatar className="w-[200px] h-[240px] rounded-2xl">
               {employee.avatar ? (
-                <motion.img
+                <img
                   src={employee.avatar}
                   alt={`${employee.firstName || ''} ${employee.lastName || ''}`}
-                  className="h-full w-full object-cover !rounded-md"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.3 }}
-                  style={{ cursor: 'pointer' }}
+                  className="h-full w-full object-cover"
                 />
               ) : (
-                <AvatarFallback className="text-2xl sm:text-3xl md:text-4xl !rounded-md">
+                <AvatarFallback className="text-4xl rounded-2xl">
                   {(employee.firstName?.[0] || '') + (employee.lastName?.[0] || '')}
                 </AvatarFallback>
               )}
             </Avatar>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-1xl text-gray-800 dark:text-white">{employee.firstName + " " + employee.lastName}</h3>
-            <p className="text-1xl text-gray-600 dark:text-gray-300">
-              {employee.position?.title || employee.currentPosition || 'Employé'}
-            </p>
-            <StarRating
-              id={employeeId}
-              onChange={(rating) => onRatingChange(employeeId, rating)}
-              initialValue={initialRating}
-            />
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              {feedbackOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    onCommentChange(employeeId, option);
-                    if (typeof (window as any).pauseScrollTemporarily === 'function') {
-                      (window as any).pauseScrollTemporarily();
-                    }
-                  }}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${initialComment.includes(option)
-                    ? "bg-[#217E82] text-white border-teal-600"
-                    : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
-                    }`}
+
+            {initialRating > 0 && (<div className="absolute top-0 right-2 z-[999]">
+              <span className={`font-extrabold text-2xl text-yellow-400`}>★ {initialRating}</span>
+            </div>)}
+
+            <AnimatePresence>
+              {!isSelected && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4"
                 >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+                  <h3 className="font-semibold text-white text-center text-lg">
+                    {employee.firstName} {employee.lastName}
+                  </h3>
+                  <p className="text-white/80 text-center text-sm">
+                    {employee.position?.title || employee.currentPosition || 'Employé'}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          <AnimatePresence>
+            {isSelected && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex-1"
+              >
+                <h3 className="font-semibold text-1xl text-gray-800 dark:text-white mt-4">
+                  {employee.firstName + " " + employee.lastName}
+                </h3>
+                <p className="text-1xl text-gray-600 dark:text-gray-300">
+                  {employee.position?.title || employee.currentPosition || 'Employé'}
+                </p>
+                <StarRating
+                  id={employeeId}
+                  onChange={(rating) => onRatingChange(employeeId, rating)}
+                  initialValue={initialRating}
+                />
+                {initialRating > 0 && !showCustomComment && (
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    {currentOptions.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          onCommentChange(employeeId, option);
+                          if (typeof (window as any).pauseScrollTemporarily === 'function') {
+                            (window as any).pauseScrollTemporarily();
+                          }
+                        }}
+                        className={`px-3 py-2 text-sm rounded-lg border transition-colors ${initialComment.includes(option)
+                          ? "bg-[#217E82] text-white border-teal-600"
+                          : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                          }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomComment(true);
+                      }}
+                      className={`px-3 py-2 text-sm rounded-lg border transition-colors ${showCustomComment || (initialComment && !currentOptions.some(opt => initialComment.includes(opt)))
+                        ? "bg-[#217E82] text-white border-teal-600"
+                        : "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                        }`}
+                    >
+                      Autre
+                    </button>
+                  </div>
+                )}
+
+                {initialRating > 0 && showCustomComment && (
+                  <div className="mt-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomComment(false);
+                          setCustomComment("");
+                          onCommentChange(employeeId, "");
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        aria-label="Retour aux tags"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                      </button>
+                      <span className="text-sm text-gray-600">Retour aux tags</span>
+                    </div>
+                    <textarea
+                      value={customComment}
+                      onChange={(e) => {
+                        setCustomComment(e.target.value);
+                        onCommentChange(employeeId, e.target.value);
+                      }}
+                      placeholder="Commentaire"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#217E82] resize-none"
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
     </motion.div>
-  )
-}
+  );
+};
 
 export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
   const { employees, feedbackSettings } = loaderData
@@ -852,11 +285,11 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
   const [redirecting, setRedirecting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [pauseScroll, setPauseScroll] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const deviceId = isBrowser ? getDeviceIdentifier() : '';
 
@@ -867,41 +300,35 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
     employeeComments: {},
   })
 
-  const completeFetcher = useFetcher();
-
   useEffect(() => {
-    if (!scrollContainerRef.current || employees.length === 0 || pauseScroll || isSearchFocused) return;
+    if (!scrollContainerRef.current || !isAutoScrolling) return;
 
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % employees.filter((employee) => employee.id || employee._id).length;
-        if (scrollContainerRef.current) {
-          const cardWidth = scrollContainerRef.current.scrollWidth / employees.filter((employee) => employee.id || employee._id).length;
-          scrollContainerRef.current.scrollTo({
-            left: cardWidth * nextIndex,
-            behavior: 'smooth'
-          });
+    const scrollContainer = scrollContainerRef.current;
+    let animationFrameId: number;
+    const scrollSpeed = 1;
+
+    const autoScroll = () => {
+      if (scrollContainer) {
+        scrollContainer.scrollLeft += scrollSpeed;
+        const maxScroll = scrollContainer.scrollWidth / 2;
+        if (scrollContainer.scrollLeft >= maxScroll) {
+          scrollContainer.scrollLeft = 0;
         }
-        return nextIndex;
-      });
-    }, 5000);
 
-    return () => clearInterval(interval);
-  }, [employees.length, pauseScroll, isSearchFocused]);
-
-  const pauseScrollTemporarily = () => {
-    setPauseScroll(true);
-    setTimeout(() => {
-      setPauseScroll(false);
-    }, 40000);
-  };
-
-  useEffect(() => {
-    (window as any).pauseScrollTemporarily = pauseScrollTemporarily;
-    return () => {
-      delete (window as any).pauseScrollTemporarily;
+        animationFrameId = requestAnimationFrame(autoScroll);
+      }
     };
-  }, []);
+
+    animationFrameId = requestAnimationFrame(autoScroll);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [isAutoScrolling]);
+
+  const completeFetcher = useFetcher();
 
   const resetCurrentSession = () => {
     if (!isBrowser) return;
@@ -936,7 +363,6 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
     }
   }
 
-  // Handle navigation when fetcher returns a session ID
   useEffect(() => {
     console.log("Fetcher state:", fetcher.state, "Fetcher data:", fetcher.data);
 
@@ -1243,6 +669,31 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
     }
   }, [fetcher.state, fetcher.data, isSubmitting]);
 
+  // Avant le return, après le filtrage
+  const filteredEmployees = employees
+    .filter((employee) => employee.id || employee._id)
+    .filter((employee) => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase();
+      const inverseFullName = `${employee.lastName || ''} ${employee.firstName || ''}`.toLowerCase();
+      return fullName.includes(query) || inverseFullName.includes(query);
+    });
+
+  // Arrêter le scroll auto si recherche active
+  const shouldAutoScroll = !searchQuery.trim() && isAutoScrolling;
+
+  // Ne dupliquer que si pas de recherche
+  const displayEmployees = searchQuery.trim()
+    ? filteredEmployees
+    : [...filteredEmployees, ...filteredEmployees];
+
+  // Modifier le useEffect du scroll
+  useEffect(() => {
+    if (!scrollContainerRef.current || !shouldAutoScroll) return;
+    // ... reste du code
+  }, [shouldAutoScroll]); // Changer la dépendance
+
   return (
     <motion.div
       className="min-h-screen max-h-screen overflow-hidden relative"
@@ -1314,7 +765,6 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
 
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-            {/* Note Pharmacie Section */}
             <motion.div variants={itemVariants} className="flex flex-col min-h-0">
               <Card className="h-full p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[50px] overflow-hidden">
                 <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
@@ -1344,14 +794,13 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
               </Card>
             </motion.div>
 
-            {/* Employee Rating Section */}
             <motion.div variants={itemVariants} className="flex flex-col min-h-0">
               <Card className="h-full p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[40px] overflow-hidden">
                 <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
                   <h1 className="text-3xl font-bold text-center">Notre personnel</h1>
-                  <h1 className="text-[20px] text-center">Qu’avez-vous pensez du personnel qui vous a reçu ? Donnez une note et sélectionnez vos impressions à chaque personne avec qui vous avez interagit.</h1>
+                  <h1 className="text-[16px] text-center">Qu’avez-vous pensez du personnel qui vous a reçu ? Donnez une note et sélectionnez vos impressions à chaque personne avec qui vous avez interagit.</h1>
                 </CardHeader>
-                <div className="relative w-[90%] mx-auto mb-1">
+                <div className="relative w-[95%] mx-auto mb-1">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
@@ -1364,53 +813,60 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
                   <input
                     type="text"
                     className="w-full border p-2 pl-10 rounded-[7px] bg-white"
-                    placeholder="Rechercher un employé"
+                    placeholder="Recherche"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
                   />
                 </div>
-                <CardContent className="px-3 py-1 flex-1 flex min-h-0 relative overflow-hidden">
-                  <motion.div
+
+                <CardContent className="px-0 py-1 flex-1 flex flex-col min-h-0 relative overflow-hidden">
+                  <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 overflow-x-auto overflow-y-hidden pr-1 min-h-0 w-full snap-x snap-mandatory scrollbar-hide"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    className="flex gap-4 overflow-x-auto overflow-y-hidden pr-1 min-h-0 w-full scrollbar-hide pb-4"
+                    style={{ scrollBehavior: isAutoScrolling ? 'auto' : 'smooth' }}
                   >
-                    {employees
-                      .filter((employee) => employee.id || employee._id)
-                      .filter((employee) => {
-                        if (!searchQuery.trim()) return true;
-                        const query = searchQuery.toLowerCase();
-                        const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase();
-                        const inverseFullName = `${employee.lastName || ''} ${employee.firstName || ''}`.toLowerCase();
-                        return fullName.includes(query) || inverseFullName.includes(query);
-                      })
-                      .map((employee, index) => {
-                        const employeeId = (employee.id || employee._id?.toString()) as string;
-                        return (
-                          <motion.div
-                            key={employeeId}
-                            className="snap-center flex-shrink-0 w-[calc(100%-3rem)]"
-                            initial={{ x: 50, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: index * 0.1, duration: 0.3 }}
-                          >
-                            <EmployeeCard
-                              employee={employee}
-                              employeeId={employeeId}
-                              onRatingChange={handleEmployeeRatingChange}
-                              onCommentChange={handleEmployeeCommentChange}
-                              initialRating={feedbackData.employeeRatings[employeeId] || 0}
-                              initialComment={feedbackData.employeeComments[employeeId] || ""}
-                            />
-                          </motion.div>
-                        );
-                      })}
-                  </motion.div>
+                    {displayEmployees.map((employee, index) => {
+                      const employeeId = (employee.id || employee._id?.toString()) as string;
+                      const uniqueKey = `${employeeId}-${index}`;
+                      const isSelected = selectedEmployeeId === employeeId;
+
+                      return (
+                        <div key={uniqueKey} className="relative">
+                          <EmployeeCardExpanded
+                            employee={employee}
+                            isSelected={isSelected}
+                            employeeId={employeeId}
+                            onRatingChange={handleEmployeeRatingChange}
+                            onCommentChange={handleEmployeeCommentChange}
+                            initialRating={feedbackData.employeeRatings[employeeId] || 0}
+                            initialComment={feedbackData.employeeComments[employeeId] || ""}
+                            onClick={() => {
+                              setSelectedEmployeeId(employeeId);
+                              setIsAutoScrolling(false);
+
+                              setTimeout(() => {
+                                const container = scrollContainerRef.current;
+                                const card = container?.children[index] as HTMLElement;
+                                if (container && card) {
+                                  const containerWidth = container.offsetWidth;
+                                  const cardLeft = card.offsetLeft;
+                                  const cardWidth = card.offsetWidth;
+                                  const offset = 200;
+                                  const scrollPosition = cardLeft - (containerWidth / 2) + (cardWidth / 2) + offset;
+                                  container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+                                }
+                              }, 50);
+                            }}
+                            onClose={() => {
+                              setSelectedEmployeeId(null);
+                              setIsAutoScrolling(true);
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+
+                  </div>
                 </CardContent>
 
                 {formError && (

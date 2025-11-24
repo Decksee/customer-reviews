@@ -19,6 +19,21 @@
             "date": 1762939022791,
             "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-12.log",
             "hash": "194b3537d5d59ae16c0eff89f681d521a8aa0bf010977d1356f76f4269b75bea"
+        },
+        {
+            "date": 1763029449459,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-13.log",
+            "hash": "67e9e8232017a072c828178de1604f5ac6edf8136841670f895115778a656694"
+        },
+        {
+            "date": 1763110787150,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-14.log",
+            "hash": "801c8cc6470b712becc1b0a2567f68d8f332d73fb9c22ee478a77841e1c511ba"
+        },
+        {
+            "date": 1763378052674,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/error/2025-11-17.log",
+            "hash": "ceccdb555aeeadb8b958c3d55cd2fc2b462a61536f35b86638aa3f6470e40101"
         }
     ],
     "hashType": "sha256"

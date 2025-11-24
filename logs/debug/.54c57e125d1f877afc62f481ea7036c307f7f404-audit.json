@@ -19,6 +19,31 @@
             "date": 1762939022790,
             "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-12.log",
             "hash": "3b9b64487057a1f775daf11ba1da60017579ef73e2a62fb4b33307d21ca07a5a"
+        },
+        {
+            "date": 1763029449458,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-13.log",
+            "hash": "88e38ff86d47287f3abc0e5ed09110d9761443629f7b64a01c86b5a1d51221bb"
+        },
+        {
+            "date": 1763110787149,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-14.log",
+            "hash": "49742d1fba027bd198f3497c8e7983ca4e7a1c3f74640897196e01f835c9ea72"
+        },
+        {
+            "date": 1763161313589,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-15.log",
+            "hash": "fed03e1ba3875c8ca7f17ed458be6c3b3a8943416a4199ee026dad457304de6a"
+        },
+        {
+            "date": 1763376306932,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-17.log",
+            "hash": "9e7a25c6c4965e340393798b7d729c6967a69e8ee35485f543d4580a03de3c90"
+        },
+        {
+            "date": 1763420443911,
+            "name": "/Users/achilleh/Documents/achille/customer-reviews/logs/debug/2025-11-18.log",
+            "hash": "3529f85c5a799ac7904109cacb48923d2b2ea2ccecae12ffdd9f8df59280fb65"
         }
     ],
     "hashType": "sha256"

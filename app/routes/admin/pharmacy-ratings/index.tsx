@@ -44,7 +44,6 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  // Ensure user is authenticated
   await authService.requireUser(request);
 
   const url = new URL(request.url);
@@ -53,16 +52,22 @@ export async function loader({ request }: Route.LoaderArgs) {
   const page = parseInt(url.searchParams.get("page") || "1");
   const sentimentFilter = url.searchParams.get("sentimentFilter") || "all";
 
-  // Get pharmacy ratings data from feedback sessions
+  const startDateParam = url.searchParams.get("startDate");
+  const endDateParam = url.searchParams.get("endDate");
+
+  const startDate = startDateParam ? new Date(startDateParam) : null;
+  const endDate = endDateParam ? new Date(endDateParam) : null;
+
   const { ratings, stats, total } = await feedbackSessionService.getPharmacyRatings(
     timeFilter,
     page,
     10,
     ratingFilter,
-    sentimentFilter
+    sentimentFilter,
+    startDate,
+    endDate
   );
 
-  // Get real chart data based on the time filter
   const chartData = await feedbackSessionService.getPharmacyRatingTrends(timeFilter);
 
   return data({
@@ -73,7 +78,10 @@ export async function loader({ request }: Route.LoaderArgs) {
     timeFilter,
     ratingFilter,
     sentimentFilter,
-    currentPage: page
+    currentPage: page,
+    // ✅ Convertir les dates en strings
+    startDate: startDate ? startDate.toISOString() : null,
+    endDate: endDate ? endDate.toISOString() : null
   });
 }
 
@@ -83,6 +91,8 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     stats,
     chartData,
     total,
+    startDate,
+    endDate,
     timeFilter: initialTimeFilter,
     ratingFilter: initialRatingFilter,
     sentimentFilter: initialSentimentFilter,
@@ -98,7 +108,14 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
   const [activeTab, setActiveTab] = useState("charts");
   const [isMobile, setIsMobile] = useState(false);
 
-  const [customDateRange, setCustomDateRange] = useState<{ start: string, end: string } | null>(null);
+  const [customDateRange, setCustomDateRange] = useState<{ start: string, end: string } | null>(
+    startDate && endDate
+      ? {
+        start: new Date(startDate).toISOString().split('T')[0],
+        end: new Date(endDate).toISOString().split('T')[0]
+      }
+      : null
+  );
   const [sentimentFilter, setSentimentFilter] = useState(initialSentimentFilter);
 
   // Check for mobile viewport on client-side only
@@ -134,7 +151,9 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
       start: newStart,
       end: prev?.end || ''
     }));
+    setTimeFilter('custom');
   };
+
 
   const handleChangeDateEnd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newEnd = e.target.value;
@@ -144,11 +163,13 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
     }));
 
     if (customDateRange?.start && newEnd) {
+      setTimeFilter('custom');
       updateURLParams({
         timeFilter: 'custom',
         startDate: customDateRange.start,
         endDate: newEnd,
         ratingFilter: ratingFilter,
+        sentimentFilter: sentimentFilter,
         page: '1'
       });
     }

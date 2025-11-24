@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import FeedbackSession, {
   type IFeedbackSession,
   type IFeedbackSessionMethods,
@@ -1780,9 +1779,8 @@ export default class FeedbackSessionService extends BaseService<
         for (let i = 0; i < 30; i++) {
           const date = new Date();
           date.setDate(date.getDate() - 29 + i);
-          const dayKey = `${date.getFullYear()}-${
-            date.getMonth() + 1
-          }-${date.getDate()}`;
+          const dayKey = `${date.getFullYear()}-${date.getMonth() + 1
+            }-${date.getDate()}`;
           monthlyData[dayKey] = { satisfied: 0, total: 0 };
         }
       }
@@ -1972,9 +1970,8 @@ export default class FeedbackSessionService extends BaseService<
         for (let i = 0; i < 30; i++) {
           const date = new Date();
           date.setDate(date.getDate() - 29 + i);
-          const dayKey = `${date.getFullYear()}-${
-            date.getMonth() + 1
-          }-${date.getDate()}`;
+          const dayKey = `${date.getFullYear()}-${date.getMonth() + 1
+            }-${date.getDate()}`;
           monthlyData[dayKey] = 0;
         }
       }
