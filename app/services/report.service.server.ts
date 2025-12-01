@@ -9,11 +9,7 @@ import { feedbackSessionService } from "~/services/feedback-session.service.serv
 import { userService } from "~/services/user.service.server";
 import { logger } from "~/core/utils/logger.server";
 
-export default class ReportService extends BaseService<
-  IReport,
-  IReportMethods,
-  ReportModel
-> {
+export default class ReportService extends BaseService<IReport, IReportMethods, ReportModel> {
   constructor() {
     super(Report);
   }
@@ -31,11 +27,12 @@ export default class ReportService extends BaseService<
    * Get recent reports with pagination
    */
   async getRecentReports(limit = 10, page = 1) {
-    const reports = await this.model.find()
+    const reports = await this.model
+      .find()
       .sort({ date: -1 })
       .limit(limit)
       .skip((page - 1) * limit)
-      .populate('generatedBy', 'firstName lastName email');
+      .populate("generatedBy", "firstName lastName email");
 
     return reports;
   }
@@ -43,25 +40,18 @@ export default class ReportService extends BaseService<
   /**
    * Generate a report file
    */
-  async generateReport(
-    type: IReport['type'],
-    format: IReport['format'],
-    userId: string,
-    dateRange?: { start: Date; end: Date },
-    employeeId?: string,
-    sentimentFilter?: string
-  ) {
-    console.log('Sentiment filter:', sentimentFilter);
+  async generateReport(type: IReport["type"], format: IReport["format"], userId: string, dateRange?: { start: Date; end: Date }, employeeId?: string, sentimentFilter?: string) {
+    console.log("Sentiment filter:", sentimentFilter);
     try {
       // Create directory if it doesn't exist
-      const reportDir = path.join(process.cwd(), 'public', 'reports');
+      const reportDir = path.join(process.cwd(), "public", "reports");
       if (!fs.existsSync(reportDir)) {
         fs.mkdirSync(reportDir, { recursive: true });
       }
 
       // Generate filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `${type}_${timestamp}.${format === 'PDF' ? 'pdf' : 'xlsx'}`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `${type}_${timestamp}.${format === "PDF" ? "pdf" : "xlsx"}`;
       const filePath = path.join(reportDir, fileName);
       const publicPath = `/reports/${fileName}`;
 
@@ -75,15 +65,15 @@ export default class ReportService extends BaseService<
       logger.info(`Generated report data: ${reportData.length} items for type ${type}`);
 
       // Generate the file based on format
-      if (format === 'PDF') {
-        await this.generatePdfReport(filePath, reportName, reportData, type, dateRange);
+      if (format === "PDF") {
+        await this.generatePdfReport(filePath, reportName, reportData, type, dateRange, sentimentFilter);
       } else {
         await this.generateExcelReport(filePath, reportName, reportData, type, dateRange);
       }
 
       // Get actual file size
       const stats = fs.statSync(filePath);
-      const fileSize = (stats.size / (1024 * 1024)).toFixed(2) + ' MB';
+      const fileSize = (stats.size / (1024 * 1024)).toFixed(2) + " MB";
 
       // Create the report record in database
       const reportData2: Partial<IReport> = {
@@ -94,13 +84,13 @@ export default class ReportService extends BaseService<
         filePath: publicPath,
         generatedBy: new mongoose.Types.ObjectId(userId),
         dateRange,
-        downloadCount: 0
+        downloadCount: 0,
       };
 
       const report = await this.model.create(reportData2);
       return report;
     } catch (error) {
-      logger.error('Error generating report:', error);
+      logger.error("Error generating report:", error);
       throw error;
     }
   }
@@ -108,13 +98,7 @@ export default class ReportService extends BaseService<
   /**
    * Generate a PDF report using PDFKit
    */
-  private async generatePdfReport(
-    filePath: string,
-    reportName: string,
-    data: any[],
-    type: IReport['type'],
-    dateRange?: { start: Date; end: Date }
-  ): Promise<void> {
+  private async generatePdfReport(filePath: string, reportName: string, data: any[], type: IReport["type"], dateRange?: { start: Date; end: Date }, sentimentFilter?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         logger.info(`Starting PDF generation for ${type} with ${data.length} items`);
@@ -122,38 +106,38 @@ export default class ReportService extends BaseService<
         // Create a new PDF document
         const doc = new PDFDocument({
           margin: 50,
-          size: 'A4',
+          size: "A4",
           info: {
             Title: reportName,
-            Author: 'Pharmacie Val d\'Oise',
-            Subject: 'Rapport généré automatiquement',
-            Keywords: 'pharmacie, rapport, données, analyse'
+            Author: "Pharmacie Val d'Oise",
+            Subject: "Rapport généré automatiquement",
+            Keywords: "pharmacie, rapport, données, analyse",
           },
-          autoFirstPage: false // We'll add the first page manually for better control
+          autoFirstPage: false, // We'll add the first page manually for better control
         });
 
         // Define a professional color palette
         const colors = {
-          primary: '#0F4C81',         // Deep blue - primary brand color
-          secondary: '#E3F2FD',       // Light blue - secondary color
-          accent: '#00ACC1',          // Teal accent - for highlights
-          text: '#263238',            // Dark gray - main text color
-          lightText: '#546E7A',       // Medium gray - secondary text
-          border: '#CFD8DC',          // Light gray - for borders
-          tableHeader: '#0F4C81',     // Deep blue for table headers
-          tableStripe: '#F5F7FA',     // Very light gray for table stripes
-          success: '#4CAF50',         // Green for positive values
-          warning: '#FFC107',         // Amber for warnings
-          error: '#F44336'            // Red for errors/negative values
+          primary: "#0F4C81", // Deep blue - primary brand color
+          secondary: "#E3F2FD", // Light blue - secondary color
+          accent: "#00ACC1", // Teal accent - for highlights
+          text: "#263238", // Dark gray - main text color
+          lightText: "#546E7A", // Medium gray - secondary text
+          border: "#CFD8DC", // Light gray - for borders
+          tableHeader: "#0F4C81", // Deep blue for table headers
+          tableStripe: "#F5F7FA", // Very light gray for table stripes
+          success: "#4CAF50", // Green for positive values
+          warning: "#FFC107", // Amber for warnings
+          error: "#F44336", // Red for errors/negative values
         };
 
         // Define fonts - use standard fonts that look professional
         const fonts = {
-          title: 'Helvetica-Bold',
-          subtitle: 'Helvetica',
-          body: 'Helvetica',
-          italic: 'Helvetica-Oblique',
-          bold: 'Helvetica-Bold'
+          title: "Helvetica-Bold",
+          subtitle: "Helvetica",
+          body: "Helvetica",
+          italic: "Helvetica-Oblique",
+          bold: "Helvetica-Bold",
         };
 
         // Pipe the PDF output to a file
@@ -162,73 +146,63 @@ export default class ReportService extends BaseService<
 
         // Add page numbers and professional footer to all pages
         let pageCount = 0;
-        doc.on('pageAdded', () => {
+        doc.on("pageAdded", () => {
           pageCount++;
           const oldBottom = doc.page.margins.bottom;
           doc.page.margins.bottom = 0;
 
           // Add a gradient footer bar
-          doc.rect(0, doc.page.height - 45, doc.page.width, 45)
-            .fill(colors.secondary);
+          doc.rect(0, doc.page.height - 45, doc.page.width, 45).fill(colors.secondary);
 
           // Add a colored line at bottom of page
-          doc.moveTo(30, doc.page.height - 45)
+          doc
+            .moveTo(30, doc.page.height - 45)
             .lineTo(doc.page.width - 30, doc.page.height - 45)
             .lineWidth(1)
             .stroke(colors.primary);
 
           // Add page number with subtle background
-          doc.circle(doc.page.width / 2, doc.page.height - 25, 12)
-            .fillAndStroke(colors.primary, colors.primary);
-          doc.fontSize(8)
-            .fillColor('white')
-            .text(
-              pageCount.toString(),
-              doc.page.width / 2 - 3,
-              doc.page.height - 28
-            );
+          doc.circle(doc.page.width / 2, doc.page.height - 25, 12).fillAndStroke(colors.primary, colors.primary);
+          doc
+            .fontSize(8)
+            .fillColor("white")
+            .text(pageCount.toString(), doc.page.width / 2 - 3, doc.page.height - 28);
 
           // Add professional footer text
-          const footerText = 'Pharmacie Val d\'Oise - Document confidentiel';
-          const footerDate = new Date().toLocaleDateString('fr-FR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
+          const footerText = "Pharmacie Val d'Oise - Document confidentiel";
+          const footerDate = new Date().toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
           });
 
           // Left footer
-          doc.fontSize(8)
+          doc
+            .fontSize(8)
             .font(fonts.body)
             .fillColor(colors.lightText)
-            .text(
-              footerText,
-              50,
-              doc.page.height - 25,
-              { width: 200 }
-            );
+            .text(footerText, 50, doc.page.height - 25, { width: 200 });
 
           // Right footer
-          doc.text(
-            footerDate,
-            doc.page.width - 150,
-            doc.page.height - 25,
-            { width: 100, align: 'right' }
-          );
+          doc.text(footerDate, doc.page.width - 150, doc.page.height - 25, {
+            width: 100,
+            align: "right",
+          });
 
           // Reset margins
           doc.page.margins.bottom = oldBottom;
         });
 
         // Create a professional cover page
-        logger.info('Adding cover page...');
+        logger.info("Adding cover page...");
         this.addCoverPage(doc, reportName, colors as any, fonts as any, dateRange);
 
         // Add a new page for the report content with a professional header
-        logger.info('Adding content page...');
+        logger.info("Adding content page...");
         doc.addPage();
 
         // Add header to content page
-        logger.info('Adding header to content page...');
+        logger.info("Adding header to content page...");
         this.addHeader(doc, reportName, colors as any, fonts as any, dateRange);
 
         // Explicitly set Y position after header to ensure content starts at the right place
@@ -236,12 +210,12 @@ export default class ReportService extends BaseService<
         logger.info(`Content will start at Y position: ${doc.y}`);
 
         // Add report title with professional spacing and typography
-        doc.fontSize(16).font(fonts.title).fillColor(colors.primary)
-          .text('Détails du rapport', 50, doc.y, { align: 'left' });
+        doc.fontSize(16).font(fonts.title).fillColor(colors.primary).text("Détails du rapport", 50, doc.y, { align: "left" });
 
         // Add visual separator
         const titleY = doc.y;
-        doc.moveTo(50, titleY + 20)
+        doc
+          .moveTo(50, titleY + 20)
           .lineTo(120, titleY + 20)
           .lineWidth(3)
           .stroke(colors.accent);
@@ -251,20 +225,24 @@ export default class ReportService extends BaseService<
 
         // Add date range with improved formatting
         if (dateRange) {
-          const startDate = dateRange.start.toLocaleDateString('fr-FR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+          const startDate = dateRange.start.toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           });
-          const endDate = dateRange.end.toLocaleDateString('fr-FR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+          const endDate = dateRange.end.toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           });
 
-          doc.fontSize(10).font(fonts.body).fillColor(colors.lightText)
-            .text('Période du rapport: ', 50, doc.y, { continued: true })
-            .font(fonts.bold).fillColor(colors.text)
+          doc
+            .fontSize(10)
+            .font(fonts.body)
+            .fillColor(colors.lightText)
+            .text("Période du rapport: ", 50, doc.y, { continued: true })
+            .font(fonts.bold)
+            .fillColor(colors.text)
             .text(`${startDate} au ${endDate}`);
 
           doc.y += 15;
@@ -272,35 +250,33 @@ export default class ReportService extends BaseService<
 
         // Add generation timestamp with icon-like element
         const now = new Date();
-        const formattedDate = now.toLocaleDateString('fr-FR', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+        const formattedDate = now.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
         });
-        const formattedTime = now.toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit'
+        const formattedTime = now.toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
         });
 
         // Add a clock icon effect
         const clockY = doc.y + 6;
-        doc.circle(54, clockY, 3)
-          .fillAndStroke(colors.accent, colors.accent);
+        doc.circle(54, clockY, 3).fillAndStroke(colors.accent, colors.accent);
 
-        doc.fontSize(9).font(fonts.italic).fillColor(colors.lightText)
-          .text(`Généré le ${formattedDate} à ${formattedTime}`, 65, doc.y);
+        doc.fontSize(9).font(fonts.italic).fillColor(colors.lightText).text(`Généré le ${formattedDate} à ${formattedTime}`, 65, doc.y);
 
         doc.y += 30; // Add space before content
 
         // Add content box with subtle border and background
         const contentStartY = doc.y;
         const contentWidth = doc.page.width - 100;
-        const contentEstimatedHeight = data.length > 0 ? Math.min(30 + (data.length * 25), 400) : 100;
+        const contentEstimatedHeight = data.length > 0 ? Math.min(30 + data.length * 25, 400) : 100;
 
         // Add subtle background for content area - ensure it's within page bounds
-        doc.rect(40, contentStartY - 10, contentWidth, contentEstimatedHeight)
-          .fill('#FAFAFA');
+        // doc.rect(40, contentStartY - 10, contentWidth, contentEstimatedHeight)
+        //   .fill('#FAFAFA');
 
         // Check if data is available with improved empty state design
         if (data.length === 0) {
@@ -308,35 +284,39 @@ export default class ReportService extends BaseService<
           const noDataY = contentStartY + 30;
 
           // Add icon-like element
-          doc.circle(doc.page.width / 2, noDataY, 15)
+          doc
+            .circle(doc.page.width / 2, noDataY, 15)
             .lineWidth(2)
-            .fillAndStroke('#F5F5F5', colors.lightText);
+            .fillAndStroke("#F5F5F5", colors.lightText);
 
           // Add an "!" symbol
-          doc.fontSize(20).font(fonts.bold).fillColor(colors.lightText)
-            .text('!', doc.page.width / 2 - 3, noDataY - 9);
+          doc
+            .fontSize(20)
+            .font(fonts.bold)
+            .fillColor(colors.lightText)
+            .text("!", doc.page.width / 2 - 3, noDataY - 9);
 
           // Position the text properly
           doc.y = noDataY + 25;
 
           // Add message with better typography
-          doc.fontSize(14).font(fonts.italic).fillColor(colors.lightText)
-            .text('Aucune donnée disponible pour cette période.', { align: 'center' });
+          doc.fontSize(14).font(fonts.italic).fillColor(colors.lightText).text("Aucune donnée disponible pour cette période.", {
+            align: "center",
+          });
 
           doc.y += 20;
-          doc.fontSize(10).fillColor(colors.lightText)
-            .text('Veuillez modifier les filtres ou sélectionner une autre période.', { align: 'center' });
+          doc.fontSize(10).fillColor(colors.lightText).text("Veuillez modifier les filtres ou sélectionner une autre période.", { align: "center" });
         } else {
           // Set Y position for table content
           doc.y = contentStartY + 10;
           logger.info(`Adding data table at Y position: ${doc.y}`);
-          
+
           // Special handling for employee reviews - use grouped structure
-          if (type === 'employee-reviews' || type === 'specific-employee-reviews') {
+          if (type === "employee-reviews" || type === "specific-employee-reviews") {
             // Group reviews by employee
             const groupedReviews = this.groupReviewsByEmployee(data);
             let currentY = doc.y;
-            
+
             // Process each employee
             for (const [employeeName, employeeReviews] of groupedReviews.entries()) {
               // Check if we need a new page for this employee
@@ -345,25 +325,41 @@ export default class ReportService extends BaseService<
                 this.addHeader(doc, reportName, colors as any, fonts as any, dateRange);
                 currentY = 100;
               }
-              
+
               // Draw employee summary
               currentY = this.drawEmployeeSummary(doc, employeeName, employeeReviews, currentY, colors, fonts);
-              
-              // Get negative reviews for this employee
-              const negativeReviews = this.getNegativeReviews(employeeReviews);
-              
-              // Draw negative reviews table
-              currentY = this.drawNegativeReviewsTable(doc, employeeName, negativeReviews, currentY, colors, fonts);
-              
-              // Add space between employees
-              currentY += 30;
-              doc.y = currentY;
+
+              // Determine which reviews to show based on sentiment filter
+              const showNegative = !sentimentFilter || sentimentFilter === "all" || sentimentFilter === "negative";
+              const showPositive = !sentimentFilter || sentimentFilter === "all" || sentimentFilter === "positive";
+
+              // Draw negative reviews if applicable
+              if (showNegative) {
+                const negativeReviews = this.getNegativeReviews(employeeReviews);
+
+                currentY = this.drawNegativeReviewsTable(doc, employeeName, negativeReviews, currentY, colors, fonts, reportName, dateRange);
+
+                // Add space after negative reviews
+                currentY += 30;
+                doc.y = currentY;
+              }
+
+              // Draw positive reviews if applicable
+              if (showPositive) {
+                const positiveReviews = this.getPositiveReviews(employeeReviews);
+
+                currentY = this.drawPositiveReviewsTable(doc, employeeName, positiveReviews, currentY, colors, fonts, reportName, dateRange);
+
+                // Add space after positive reviews
+                currentY += 30;
+                doc.y = currentY;
+              }
             }
           } else {
             // For other report types, use the standard table
             this.addDataTable(doc, data, type, colors, fonts);
           }
-          
+
           logger.info(`Table complete, Y position now: ${doc.y}`);
         }
 
@@ -371,7 +367,7 @@ export default class ReportService extends BaseService<
         if (data.length > 0) {
           // Ensure we're not too close to the bottom of the page
           if (doc.y > doc.page.height - 200) {
-            logger.info('Adding new page for summary section');
+            logger.info("Adding new page for summary section");
             doc.addPage();
             this.addHeader(doc, reportName, colors as any, fonts as any, dateRange);
             doc.y = 100;
@@ -381,15 +377,15 @@ export default class ReportService extends BaseService<
         }
 
         // Finalize the PDF
-        logger.info('Finalizing PDF document...');
+        logger.info("Finalizing PDF document...");
         doc.end();
 
         // Wait for the stream to finish
-        stream.on('finish', () => {
+        stream.on("finish", () => {
           resolve();
         });
 
-        stream.on('error', (err) => {
+        stream.on("error", (err) => {
           reject(err);
         });
       } catch (err) {
@@ -401,121 +397,139 @@ export default class ReportService extends BaseService<
   /**
    * Add professional cover page to PDF
    */
-  private addCoverPage(
-    doc: PDFKit.PDFDocument,
-    reportName: string,
-    colors: any,
-    fonts: any,
-    dateRange?: { start: Date; end: Date }
-  ): void {
+  private addCoverPage(doc: PDFKit.PDFDocument, reportName: string, colors: any, fonts: any, dateRange?: { start: Date; end: Date }): void {
     // Create a new first page
     doc.addPage();
 
     // Add gradient background effect
-    doc.rect(0, 0, doc.page.width, doc.page.height)
-      .fill('#FAFBFC');
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FAFBFC");
 
     // Add top color band
-    doc.rect(0, 0, doc.page.width, 180)
-      .fill(colors.primary);
+    doc.rect(0, 0, doc.page.width, 180).fill(colors.primary);
 
     // Add subtle design elements - left side decoration
-    doc.rect(0, 180, 15, doc.page.height - 180)
-      .fill(colors.primary);
+    doc.rect(0, 180, 15, doc.page.height - 180).fill(colors.primary);
 
     // Right side decoration
-    doc.rect(doc.page.width - 15, 180, 15, doc.page.height - 180)
-      .fill(colors.accent);
+    doc.rect(doc.page.width - 15, 180, 15, doc.page.height - 180).fill(colors.accent);
 
     // Add pharmacy logo/name with modern typography
-    doc.fontSize(28).font(fonts.title).fillColor('white')
-      .text('PHARMACIE', doc.page.width / 2 - 110, 60);
+    doc
+      .fontSize(28)
+      .font(fonts.title)
+      .fillColor("white")
+      .text("PHARMACIE", doc.page.width / 2 - 110, 60);
 
-    doc.fontSize(40).font(fonts.title).fillColor('white')
-      .text('VAL D\'OISE', doc.page.width / 2 - 110, 90);
+    doc
+      .fontSize(40)
+      .font(fonts.title)
+      .fillColor("white")
+      .text("VAL D'OISE", doc.page.width / 2 - 110, 90);
 
     // Add modern separator with gradient effect
     const gradientWidth = doc.page.width - 120;
-    doc.rect(60, 150, gradientWidth / 3, 3).fill('white');
+    doc.rect(60, 150, gradientWidth / 3, 3).fill("white");
     doc.rect(60 + gradientWidth / 3, 150, gradientWidth / 3, 3).fill(colors.secondary);
-    doc.rect(60 + (gradientWidth * 2 / 3), 150, gradientWidth / 3, 3).fill(colors.accent);
+    doc.rect(60 + (gradientWidth * 2) / 3, 150, gradientWidth / 3, 3).fill(colors.accent);
 
     // Add document type badge
     const badgeY = 200;
-    doc.roundedRect(60, badgeY, 120, 30, 5)
-      .fill(colors.accent);
-    doc.fontSize(12).font(fonts.bold).fillColor('white')
-      .text('RAPPORT OFFICIEL', 70, badgeY + 9);
+    doc.roundedRect(60, badgeY, 120, 30, 5).fill(colors.accent);
+    doc
+      .fontSize(12)
+      .font(fonts.bold)
+      .fillColor("white")
+      .text("RAPPORT OFFICIEL", 70, badgeY + 9);
 
     // Add report title with visual hierarchy
     const titleY = 260;
-    doc.fontSize(26).font(fonts.title).fillColor(colors.primary)
-      .text('RAPPORT', 60, titleY);
+    doc.fontSize(26).font(fonts.title).fillColor(colors.primary).text("RAPPORT", 60, titleY);
 
     // Add report subtitle with dynamic sizing based on length
     const fontSize = reportName.length > 40 ? 18 : 22;
-    doc.fontSize(fontSize).font(fonts.title).fillColor(colors.text)
+    doc
+      .fontSize(fontSize)
+      .font(fonts.title)
+      .fillColor(colors.text)
       .text(reportName, 60, titleY + 40, { width: doc.page.width - 120 });
 
     // Add date range with improved design
     if (dateRange) {
-      const startDate = dateRange.start.toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      const startDate = dateRange.start.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
-      const endDate = dateRange.end.toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      const endDate = dateRange.end.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
 
       const dateRangeY = titleY + 90;
       // Add date icon
-      doc.circle(67, dateRangeY + 7, 5)
+      doc
+        .circle(67, dateRangeY + 7, 5)
         .lineWidth(1.5)
-        .fillAndStroke('#FFFFFF', colors.accent);
+        .fillAndStroke("#FFFFFF", colors.accent);
 
       // Add date lines
-      doc.moveTo(65, dateRangeY + 4).lineTo(69, dateRangeY + 4).stroke();
-      doc.moveTo(67, dateRangeY + 2).lineTo(67, dateRangeY + 7).stroke();
+      doc
+        .moveTo(65, dateRangeY + 4)
+        .lineTo(69, dateRangeY + 4)
+        .stroke();
+      doc
+        .moveTo(67, dateRangeY + 2)
+        .lineTo(67, dateRangeY + 7)
+        .stroke();
 
-      doc.fontSize(14).font(fonts.bold).fillColor(colors.lightText)
-        .text('Période du rapport:', 80, dateRangeY);
+      doc.fontSize(14).font(fonts.bold).fillColor(colors.lightText).text("Période du rapport:", 80, dateRangeY);
 
-      doc.fontSize(14).font(fonts.body).fillColor(colors.text)
+      doc
+        .fontSize(14)
+        .font(fonts.body)
+        .fillColor(colors.text)
         .text(`${startDate} au ${endDate}`, 80, dateRangeY + 20);
     }
 
     // Add generation info with icon
     const now = new Date();
-    const generationDate = now.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    const generationDate = now.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
 
-    const generationTime = now.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
+    const generationTime = now.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     const genInfoY = titleY + (dateRange ? 140 : 90);
 
     // Add clock icon
-    doc.circle(67, genInfoY + 7, 5)
+    doc
+      .circle(67, genInfoY + 7, 5)
       .lineWidth(1.5)
-      .fillAndStroke('#FFFFFF', colors.accent);
+      .fillAndStroke("#FFFFFF", colors.accent);
 
     // Add clock hands (simplified)
-    doc.moveTo(67, genInfoY + 7).lineTo(67, genInfoY + 4).stroke();
-    doc.moveTo(67, genInfoY + 7).lineTo(70, genInfoY + 7).stroke();
+    doc
+      .moveTo(67, genInfoY + 7)
+      .lineTo(67, genInfoY + 4)
+      .stroke();
+    doc
+      .moveTo(67, genInfoY + 7)
+      .lineTo(70, genInfoY + 7)
+      .stroke();
 
-    doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText)
-      .text(`Généré le ${generationDate}`, 80, genInfoY);
+    doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText).text(`Généré le ${generationDate}`, 80, genInfoY);
 
-    doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText)
+    doc
+      .fontSize(12)
+      .font(fonts.italic)
+      .fillColor(colors.lightText)
       .text(`à ${generationTime}`, 80, genInfoY + 16);
 
     // Add decorative elements - horizontal bars at bottom
@@ -526,352 +540,342 @@ export default class ReportService extends BaseService<
     // Add company information with professional layout
     const addressY = barY + 15;
 
-    doc.fontSize(14).font(fonts.bold).fillColor(colors.primary)
-      .text('Pharmacie Val d\'Oise', 60, addressY);
+    doc.fontSize(14).font(fonts.bold).fillColor(colors.primary).text("Pharmacie Val d'Oise", 60, addressY);
 
-    doc.fontSize(10).font(fonts.body).fillColor(colors.lightText)
-      .text('Abidjan Cocody Bessikoi', 60, addressY + 20)
-      .text('Centre commercial KOKOH Mall', 60, addressY + 32)
-      .text('à 400 mètres du CHU d\'Angré', 60, addressY + 44);
+    doc
+      .fontSize(10)
+      .font(fonts.body)
+      .fillColor(colors.lightText)
+      .text("Abidjan Cocody Bessikoi", 60, addressY + 20)
+      .text("Centre commercial KOKOH Mall", 60, addressY + 32)
+      .text("à 400 mètres du CHU d'Angré", 60, addressY + 44);
 
     // Add contact info with icons
     const contactY = addressY;
     const contactX = 350;
 
     // Phone icon (simplified)
-    doc.roundedRect(contactX, contactY, 14, 14, 2)
-      .lineWidth(1)
-      .fillAndStroke('#FFFFFF', colors.accent);
+    doc.roundedRect(contactX, contactY, 14, 14, 2).lineWidth(1).fillAndStroke("#FFFFFF", colors.accent);
 
-    doc.fontSize(10).font(fonts.body).fillColor(colors.text)
-      .text('Tél: +225 07 00 00 37 37', contactX + 20, contactY + 3);
+    doc
+      .fontSize(10)
+      .font(fonts.body)
+      .fillColor(colors.text)
+      .text("Tél: +225 07 00 00 37 37", contactX + 20, contactY + 3);
 
     // Email icon (simplified)
-    doc.moveTo(contactX, contactY + 30)
+    doc
+      .moveTo(contactX, contactY + 30)
       .lineTo(contactX + 14, contactY + 24)
       .lineTo(contactX + 14, contactY + 36)
       .lineTo(contactX, contactY + 30)
       .lineWidth(1)
-      .fillAndStroke('#FFFFFF', colors.accent);
+      .fillAndStroke("#FFFFFF", colors.accent);
 
-    doc.fontSize(10).font(fonts.body).fillColor(colors.text)
-      .text('contact@pharmacievaldoise.com', contactX + 20, contactY + 27);
+    doc
+      .fontSize(10)
+      .font(fonts.body)
+      .fillColor(colors.text)
+      .text("contact@pharmacievaldoise.com", contactX + 20, contactY + 27);
 
     // Add document type and confidentiality notice
-    doc.fontSize(8).font(fonts.italic).fillColor(colors.lightText)
-      .text('Document confidentiel - Usage interne uniquement', 60, doc.page.height - 50);
+    doc
+      .fontSize(8)
+      .font(fonts.italic)
+      .fillColor(colors.lightText)
+      .text("Document confidentiel - Usage interne uniquement", 60, doc.page.height - 50);
   }
 
   /**
    * Add professional header to each content page
    */
-  private addHeader(
-    doc: PDFKit.PDFDocument,
-    reportName: string,
-    colors: any,
-    fonts: any,
-    dateRange?: { start: Date; end: Date }
-  ): void {
+  private addHeader(doc: PDFKit.PDFDocument, reportName: string, colors: any, fonts: any, dateRange?: { start: Date; end: Date }): void {
     // Add a modern header with color band and shadow effect
-    doc.rect(0, 0, doc.page.width, 5)
-      .fill(colors.accent);
+    doc.rect(0, 0, doc.page.width, 5).fill(colors.accent);
 
     // Add main header background with subtle gradient
-    doc.rect(0, 5, doc.page.width, 60)
-      .fill(colors.primary);
+    doc.rect(0, 5, doc.page.width, 60).fill(colors.primary);
 
     // Add stylish visual element
-    doc.rect(0, 65, 15, 15)
-      .fill(colors.accent);
+    doc.rect(0, 65, 15, 15).fill(colors.accent);
 
     // Add pharmacy logo/name
-    doc.fontSize(14).font(fonts.title).fillColor('white')
-      .text('PHARMACIE VAL D\'OISE', 50, 22);
+    doc.fontSize(14).font(fonts.title).fillColor("white").text("PHARMACIE VAL D'OISE", 50, 22);
 
     // Add vertical separator
-    doc.rect(230, 20, 1, 30)
-      .fill('rgba(255, 255, 255, 0.4)');
+    doc.rect(230, 20, 1, 30).fill("rgba(255, 255, 255, 0.4)");
 
     // Add report title - truncate if too long for header
     let displayTitle = reportName;
     if (reportName.length > 40) {
-      displayTitle = reportName.substring(0, 37) + '...';
+      displayTitle = reportName.substring(0, 37) + "...";
     }
 
-    doc.fontSize(11).font(fonts.subtitle).fillColor('white')
-      .text(displayTitle, 250, 22, { width: 300 });
+    doc.fontSize(11).font(fonts.subtitle).fillColor("white").text(displayTitle, 250, 22, { width: 300 });
 
     // Add date range if provided with professional formatting
     if (dateRange) {
-      const start = dateRange.start.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
+      const start = dateRange.start.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
       });
-      const end = dateRange.end.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
+      const end = dateRange.end.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
       });
 
-      doc.fontSize(9).font(fonts.body).fillColor('rgba(255, 255, 255, 0.8)')
-        .text(`Période: ${start} - ${end}`, 250, 40);
+      doc.fontSize(9).font(fonts.body).fillColor("rgba(255, 255, 255, 0.8)").text(`Période: ${start} - ${end}`, 250, 40);
     }
   }
 
   /**
    * Add professional data table to PDF
    */
-  private addDataTable(
-    doc: PDFKit.PDFDocument,
-    data: any[],
-    type: IReport['type'],
-    colors: any,
-    fonts: any
-  ): void {
-    // Get headings for the table
-    const headings = this.getReportHeadings(type);
-    const colCount = headings.length;
+  // private addDataTable(
+  //   doc: PDFKit.PDFDocument,
+  //   data: any[],
+  //   type: IReport['type'],
+  //   colors: any,
+  //   fonts: any
+  // ): void {
+  //   // Get headings for the table
+  //   const headings = this.getReportHeadings(type);
+  //   const colCount = headings.length;
 
-    // Log data being rendered
-    logger.info(`Rendering ${data.length} rows for ${type} report`);
+  //   // Log data being rendered
+  //   logger.info(`Rendering ${data.length} rows for ${type} report`);
 
-    // Calculate table position - ensure we have a valid Y position
-    let yPos = doc.y || 200; // Fallback to 200 if doc.y is undefined
-    const xPos = 50;
+  //   // Calculate table position - ensure we have a valid Y position
+  //   let yPos = doc.y || 200; // Fallback to 200 if doc.y is undefined
+  //   const xPos = 50;
 
-    // Calculate table width and column widths with professional proportions
-    const tableWidth = 500;
-    let colWidths: number[] = [];
+  //   // Calculate table width and column widths with professional proportions
+  //   const tableWidth = 500;
+  //   let colWidths: number[] = [];
 
-    // Set specific column widths based on content type for better readability
-    switch (type) {
-      case 'employees':
-        colWidths = [100, 100, 140, 80, 80]; // Nom, Prénom, Email, Poste, Date
-        break;
-      case 'clients':
-        colWidths = [100, 100, 120, 80, 100]; // Nom, Prénom, Email, Téléphone, Visite
-        break;
-      case 'pharmacy-reviews':
-        colWidths = [80, 50, 280, 90]; // Date, Note, Commentaire, Client
-        break;
-      case 'employee-reviews':
-      case 'specific-employee-reviews':
-        colWidths = [100, 80, 50, 180, 90]; // Employé, Date, Note, Commentaire, Client
-        break;
-      case 'suggestions':
-        colWidths = [80, 280, 90, 50]; // Date, Suggestion, Client, Statut
-        break;
-      default:
-        // Equal width for all columns if type is not recognized
-        colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
-    }
+  //   // Set specific column widths based on content type for better readability
+  //   switch (type) {
+  //     case 'employees':
+  //       colWidths = [100, 100, 140, 80, 80]; // Nom, Prénom, Email, Poste, Date
+  //       break;
+  //     case 'clients':
+  //       colWidths = [100, 100, 120, 80, 100]; // Nom, Prénom, Email, Téléphone, Visite
+  //       break;
+  //     case 'pharmacy-reviews':
+  //       colWidths = [80, 50, 280, 90]; // Date, Note, Commentaire, Client
+  //       break;
+  //     case 'employee-reviews':
+  //     case 'specific-employee-reviews':
+  //       colWidths = [100, 80, 50, 180, 90]; // Employé, Date, Note, Commentaire, Client
+  //       break;
+  //     case 'suggestions':
+  //       colWidths = [80, 280, 90, 50]; // Date, Suggestion, Client, Statut
+  //       break;
+  //     default:
+  //       // Equal width for all columns if type is not recognized
+  //       colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
+  //   }
 
-    // Adjust column widths if they don't match the expected column count
-    if (colWidths.length !== colCount) {
-      colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
-    }
+  //   // Adjust column widths if they don't match the expected column count
+  //   if (colWidths.length !== colCount) {
+  //     colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
+  //   }
 
-    // Add some vertical space before the table
-    doc.moveDown(0.5);
-    yPos = doc.y;
+  //   // Add some vertical space before the table
+  //   doc.moveDown(0.5);
+  //   yPos = doc.y;
 
-    // Create a professional table container with subtle shadow
-    // Shadow effect (layered rectangles with decreasing opacity)
-    doc.rect(xPos + 4, yPos + 4, tableWidth, data.length * 30 + 40)
-      .fill('rgba(0, 0, 0, 0.03)');
-    doc.rect(xPos + 2, yPos + 2, tableWidth, data.length * 30 + 40)
-      .fill('rgba(0, 0, 0, 0.05)');
+  //   // Create a professional table container with subtle shadow
+  //   // Shadow effect (layered rectangles with decreasing opacity)
+  //   doc.rect(xPos + 4, yPos + 4, tableWidth, data.length * 30 + 40)
+  //     .fill('rgba(0, 0, 0, 0.03)');
+  //   doc.rect(xPos + 2, yPos + 2, tableWidth, data.length * 30 + 40)
+  //     .fill('rgba(0, 0, 0, 0.05)');
 
-    // Table border
-    doc.roundedRect(xPos - 1, yPos - 1, tableWidth + 2, data.length * 30 + 42, 3)
-      .lineWidth(0.75)
-      .stroke(colors.border);
+  //   // Table border
+  //   doc.roundedRect(xPos - 1, yPos - 1, tableWidth + 2, data.length * 30 + 42, 3)
+  //     .lineWidth(0.75)
+  //     .stroke(colors.border);
 
-    // Draw modern table header with gradient effect
-    doc.rect(xPos, yPos, tableWidth, 36)
-      .fill(colors.tableHeader);
+  //   // Draw modern table header with gradient effect
+  //   doc.rect(xPos, yPos, tableWidth, 36)
+  //     .fill(colors.tableHeader);
 
-    // Add subtle highlight to header
-    doc.rect(xPos, yPos, tableWidth, 2)
-      .fill(colors.accent);
+  //   // Add subtle highlight to header
+  //   doc.rect(xPos, yPos, tableWidth, 2)
+  //     .fill(colors.accent);
 
-    // Draw table headers with improved typography
-    doc.fillColor('white').fontSize(10).font(fonts.bold);
-    headings.forEach((heading, i) => {
-      let xOffset = xPos;
-      for (let j = 0; j < i; j++) {
-        xOffset += colWidths[j];
-      }
+  //   // Draw table headers with improved typography
+  //   doc.fillColor('white').fontSize(10).font(fonts.bold);
+  //   headings.forEach((heading, i) => {
+  //     let xOffset = xPos;
+  //     for (let j = 0; j < i; j++) {
+  //       xOffset += colWidths[j];
+  //     }
 
-      // Add slight vertical centering adjustment
-      const headerY = yPos + 13;
+  //     // Add slight vertical centering adjustment
+  //     const headerY = yPos + 13;
 
-      doc.text(heading, xOffset + 5, headerY, {
-        width: colWidths[i] - 10,
-        align: 'center'
-      });
-    });
+  //     doc.text(heading, xOffset + 5, headerY, {
+  //       width: colWidths[i] - 10,
+  //       align: 'center'
+  //     });
+  //   });
 
-    yPos += 36; // Increased header height
+  //   yPos += 36; // Increased header height
 
-    // Draw table rows with improved styling
-    doc.font(fonts.body).fontSize(9).fillColor(colors.text);
+  //   // Draw table rows with improved styling
+  //   doc.font(fonts.body).fontSize(9).fillColor(colors.text);
 
-    if (data.length === 0) {
-      // This should never happen as we check for data earlier, but just in case
-      doc.moveDown(2);
-      doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText)
-        .text('Aucune donnée disponible pour ce rapport.', { align: 'center' });
-      return;
-    }
+  //   if (data.length === 0) {
+  //     // This should never happen as we check for data earlier, but just in case
+  //     doc.moveDown(2);
+  //     doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText)
+  //       .text('Aucune donnée disponible pour ce rapport.', { align: 'center' });
+  //     return;
+  //   }
 
-    data.forEach((row, rowIndex) => {
-      // Get row data formatted for this report type
-      const rowData = this.formatRowData(row, type);
+  //   data.forEach((row, rowIndex) => {
+  //     // Get row data formatted for this report type
+  //     const rowData = this.formatRowData(row, type);
 
-      // Calculate required row height based on content with better algorithm
-      let rowHeight = 28; // Increased minimum height for better readability
-      const maxContentHeight = rowData.map((cell, i) => {
-        const cellText = String(cell || '');
-        const cellWidth = colWidths[i] - 14; // 7px padding on each side for more breathing room
+  //     // Calculate required row height based on content with better algorithm
+  //     let rowHeight = 28; // Increased minimum height for better readability
+  //     const maxContentHeight = rowData.map((cell, i) => {
+  //       const cellText = String(cell || '');
+  //       const cellWidth = colWidths[i] - 14; // 7px padding on each side for more breathing room
 
-        // Better text height estimation
-        const linesEstimate = Math.ceil(cellText.length / (cellWidth / 4.5));
-        const textHeight = linesEstimate * 12;
+  //       // Better text height estimation
+  //       const linesEstimate = Math.ceil(cellText.length / (cellWidth / 4.5));
+  //       const textHeight = linesEstimate * 12;
 
-        return Math.max(textHeight, 24); // Increased minimum
-      });
+  //       return Math.max(textHeight, 24); // Increased minimum
+  //     });
 
-      rowHeight = Math.max(...maxContentHeight, rowHeight);
+  //     rowHeight = Math.max(...maxContentHeight, rowHeight);
 
-      // Check if we need a new page
-      if (yPos + rowHeight > doc.page.height - 100) {
-        doc.addPage();
+  //     // Check if we need a new page
+  //     if (yPos + rowHeight > doc.page.height - 100) {
+  //       doc.addPage();
 
-        // Add professional header to the new page
-        this.addHeader(doc, doc.info.Title as string, colors as any, fonts as any);
+  //       // Add professional header to the new page
+  //       this.addHeader(doc, doc.info.Title as string, colors as any, fonts as any);
 
-        // Reset y position
-        yPos = 100; // Start table content below header
-        doc.y = yPos; // Also update doc.y
+  //       // Reset y position
+  //       yPos = 100; // Start table content below header
+  //       doc.y = yPos; // Also update doc.y
 
-        // Add table header on new page
-        doc.rect(xPos, yPos, tableWidth, 36)
-          .fill(colors.tableHeader);
+  //       // Add table header on new page
+  //       doc.rect(xPos, yPos, tableWidth, 36)
+  //         .fill(colors.tableHeader);
 
-        // Add subtle highlight to header
-        doc.rect(xPos, yPos, tableWidth, 2)
-          .fill(colors.accent);
+  //       // Add subtle highlight to header
+  //       doc.rect(xPos, yPos, tableWidth, 2)
+  //         .fill(colors.accent);
 
-        // Draw headers on new page
-        doc.fillColor('white').fontSize(10).font(fonts.bold);
-        headings.forEach((heading, i) => {
-          let xOffset = xPos;
-          for (let j = 0; j < i; j++) {
-            xOffset += colWidths[j];
-          }
-          doc.text(heading, xOffset + 5, yPos + 13, {
-            width: colWidths[i] - 10,
-            align: 'center'
-          });
-        });
+  //       // Draw headers on new page
+  //       doc.fillColor('white').fontSize(10).font(fonts.bold);
+  //       headings.forEach((heading, i) => {
+  //         let xOffset = xPos;
+  //         for (let j = 0; j < i; j++) {
+  //           xOffset += colWidths[j];
+  //         }
+  //         doc.text(heading, xOffset + 5, yPos + 13, {
+  //           width: colWidths[i] - 10,
+  //           align: 'center'
+  //         });
+  //       });
 
-        yPos += 36;
-      }
+  //       yPos += 36;
+  //     }
 
-      // Draw alternating row background with more subtle colors
-      const backgroundColor = rowIndex % 2 === 0 ? 'white' : colors.tableStripe;
-      doc.rect(xPos, yPos, tableWidth, rowHeight)
-        .fill(backgroundColor);
+  //     // Draw alternating row background with more subtle colors
+  //     const backgroundColor = rowIndex % 2 === 0 ? 'white' : colors.tableStripe;
+  //     doc.rect(xPos, yPos, tableWidth, rowHeight)
+  //       .fill(backgroundColor);
 
-      // Draw cell data with improved typography and spacing
-      doc.fillColor(colors.text);
-      rowData.forEach((cell, i) => {
-        let xOffset = xPos;
-        for (let j = 0; j < i; j++) {
-          xOffset += colWidths[j];
-        }
+  //     // Draw cell data with improved typography and spacing
+  //     doc.fillColor(colors.text);
+  //     rowData.forEach((cell, i) => {
+  //       let xOffset = xPos;
+  //       for (let j = 0; j < i; j++) {
+  //         xOffset += colWidths[j];
+  //       }
 
-        const cellText = String(cell || '');
+  //       const cellText = String(cell || '');
 
-        // Determine alignment based on content
-        let align: 'left' | 'center' | 'right' = 'left';
+  //       // Determine alignment based on content
+  //       let align: 'left' | 'center' | 'right' = 'left';
 
-        // Center for numbers, ratings and short content
-        if (cellText.length < 5 || /^\d+(\.\d+)?$/.test(cellText) ||
-          (i === 2 && (type === 'pharmacy-reviews' || type === 'employee-reviews'))) {
-          align = 'center';
-        }
+  //       // Center for numbers, ratings and short content
+  //       if (cellText.length < 5 || /^\d+(\.\d+)?$/.test(cellText) ||
+  //         (i === 2 && (type === 'pharmacy-reviews' || type === 'employee-reviews'))) {
+  //         align = 'center';
+  //       }
 
-        // Special case for status column in suggestions
-        if (type === 'suggestions' && i === 3) {
-          align = 'center';
+  //       // Special case for status column in suggestions
+  //       if (type === 'suggestions' && i === 3) {
+  //         align = 'center';
 
-          // Add a status badge-like appearance if it's the status column
-          const statusBgColor = cellText === 'Traité' ? colors.success : colors.accent;
-          const cellCenter = xOffset + colWidths[i] / 2;
-          const badgeWidth = 60;
+  //         // Add a status badge-like appearance if it's the status column
+  //         const statusBgColor = cellText === 'Traité' ? colors.success : colors.accent;
+  //         const cellCenter = xOffset + colWidths[i] / 2;
+  //         const badgeWidth = 60;
 
-          // Draw status badge
-          doc.roundedRect(cellCenter - badgeWidth / 2, yPos + (rowHeight / 2) - 8,
-            badgeWidth, 16, 8)
-            .fill(statusBgColor);
+  //         // Draw status badge
+  //         doc.roundedRect(cellCenter - badgeWidth / 2, yPos + (rowHeight / 2) - 8,
+  //           badgeWidth, 16, 8)
+  //           .fill(statusBgColor);
 
-          // Draw status text in white
-          doc.fillColor('white')
-            .text(cellText, xOffset + 5, yPos + (rowHeight / 2) - 4, {
-              width: colWidths[i] - 10,
-              align: 'center'
-            });
+  //         // Draw status text in white
+  //         doc.fillColor('white')
+  //           .text(cellText, xOffset + 5, yPos + (rowHeight / 2) - 4, {
+  //             width: colWidths[i] - 10,
+  //             align: 'center'
+  //           });
 
-          // Reset fill color for next cells
-          doc.fillColor(colors.text);
-          return;
-        }
+  //         // Reset fill color for next cells
+  //         doc.fillColor(colors.text);
+  //         return;
+  //       }
 
-        // Regular cell text
-        doc.text(cellText, xOffset + 7, yPos + 7, {
-          width: colWidths[i] - 14,
-          align,
-          lineBreak: true,
-          height: rowHeight - 14 // Allow text to wrap within the cell with better padding
-        });
-      });
+  //       // Regular cell text
+  //       doc.text(cellText, xOffset + 7, yPos + 7, {
+  //         width: colWidths[i] - 14,
+  //         align,
+  //         lineBreak: true,
+  //         height: rowHeight - 14 // Allow text to wrap within the cell with better padding
+  //       });
+  //     });
 
-      // Draw horizontal divider between rows - more subtle than full grid
-      doc.lineWidth(0.2).strokeColor(colors.border);
-      doc.moveTo(xPos, yPos + rowHeight)
-        .lineTo(xPos + tableWidth, yPos + rowHeight)
-        .stroke();
+  //     // Draw horizontal divider between rows - more subtle than full grid
+  //     doc.lineWidth(0.2).strokeColor(colors.border);
+  //     doc.moveTo(xPos, yPos + rowHeight)
+  //       .lineTo(xPos + tableWidth, yPos + rowHeight)
+  //       .stroke();
 
-      // Draw column separators - subtle vertical lines
-      let xLine = xPos;
-      for (let i = 1; i < colCount; i++) {
-        xLine += colWidths[i - 1];
-        doc.moveTo(xLine, yPos)
-          .lineTo(xLine, yPos + rowHeight)
-          .stroke();
-      }
+  //     // Draw column separators - subtle vertical lines
+  //     let xLine = xPos;
+  //     for (let i = 1; i < colCount; i++) {
+  //       xLine += colWidths[i - 1];
+  //       doc.moveTo(xLine, yPos)
+  //         .lineTo(xLine, yPos + rowHeight)
+  //         .stroke();
+  //     }
 
-      yPos += rowHeight;
-    });
+  //     yPos += rowHeight;
+  //   });
 
-    // Update doc.y to the correct position after the table
-    doc.y = yPos + 20; // Add some space after the table
-  }
+  //   // Update doc.y to the correct position after the table
+  //   doc.y = yPos + 20; // Add some space after the table
+  // }
 
   /**
    * Add professional summary section to PDF
    */
-  private addSummarySection(
-    doc: PDFKit.PDFDocument,
-    data: any[],
-    type: IReport['type'],
-    colors: any,
-    fonts: any,
-    dateRange?: { start: Date; end: Date }
-  ): void {
+  private addSummarySection(doc: PDFKit.PDFDocument, data: any[], type: IReport["type"], colors: any, fonts: any, dateRange?: { start: Date; end: Date }): void {
     // Ensure we have a valid Y position and add some gap after previous content
     const summaryStartY = (doc.y || 300) + 30;
     doc.y = summaryStartY;
@@ -881,18 +885,19 @@ export default class ReportService extends BaseService<
     const estimatedHeight = 130; // Estimate height for the container
 
     // Add subtle background and border for summary section
-    doc.roundedRect(40, summaryStartY, summaryWidth, estimatedHeight, 4)
-      .lineWidth(0.5)
-      .fillAndStroke('#F9FAFC', colors.border);
+    doc.roundedRect(40, summaryStartY, summaryWidth, estimatedHeight, 4).lineWidth(0.5).fillAndStroke("#F9FAFC", colors.border);
 
     // Add summary title with accent bar
-    doc.rect(40, summaryStartY, 4, 24)
-      .fill(colors.accent);
+    doc.rect(40, summaryStartY, 4, 24).fill(colors.accent);
 
-    doc.fontSize(16).font(fonts.title).fillColor(colors.primary)
-      .text('RÉSUMÉ', 55, summaryStartY + 6);
+    doc
+      .fontSize(16)
+      .font(fonts.title)
+      .fillColor(colors.primary)
+      .text("RÉSUMÉ", 55, summaryStartY + 6);
 
-    doc.moveTo(55, summaryStartY + 26)
+    doc
+      .moveTo(55, summaryStartY + 26)
       .lineTo(150, summaryStartY + 26)
       .lineWidth(1)
       .stroke(colors.border);
@@ -903,25 +908,21 @@ export default class ReportService extends BaseService<
 
     // Add date range info with icon if provided
     if (dateRange) {
-      const startDate = dateRange.start.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+      const startDate = dateRange.start.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       });
-      const endDate = dateRange.end.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+      const endDate = dateRange.end.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       });
 
       // Add calendar icon
-      doc.circle(55, currentY + 5, 4)
-        .fill(colors.accent);
+      doc.circle(55, currentY + 5, 4).fill(colors.accent);
 
-      doc.fontSize(10).font(fonts.bold).fillColor(colors.text)
-        .text(`Période analysée: `, 65, currentY, { continued: true })
-        .font(fonts.body)
-        .text(`${startDate} au ${endDate}`);
+      doc.fontSize(10).font(fonts.bold).fillColor(colors.text).text(`Période analysée: `, 65, currentY, { continued: true }).font(fonts.body).text(`${startDate} au ${endDate}`);
 
       currentY += 20; // Move down after date range
     }
@@ -935,17 +936,15 @@ export default class ReportService extends BaseService<
     doc.fontSize(10).font(fonts.body).fillColor(colors.text);
 
     switch (type) {
-      case 'employees':
+      case "employees":
         // Column 1
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Nombre total d\'employés', data.length.toString(),
-          colors.primary, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Nombre total d'employés", data.length.toString(), colors.primary, fonts);
 
         // Column 2 - Add hire date range if available
         let earliestDate = new Date();
         let latestDate = new Date(2000, 0, 1);
 
-        data.forEach(emp => {
+        data.forEach((emp) => {
           if (emp.hireDate) {
             const hireDate = new Date(emp.hireDate);
             if (hireDate < earliestDate) earliestDate = hireDate;
@@ -954,57 +953,49 @@ export default class ReportService extends BaseService<
         });
 
         if (latestDate > new Date(2000, 0, 1)) {
-          const earliestFormatted = earliestDate.toLocaleDateString('fr-FR', {
-            month: 'short',
-            year: 'numeric'
+          const earliestFormatted = earliestDate.toLocaleDateString("fr-FR", {
+            month: "short",
+            year: "numeric",
           });
-          const latestFormatted = latestDate.toLocaleDateString('fr-FR', {
-            month: 'short',
-            year: 'numeric'
+          const latestFormatted = latestDate.toLocaleDateString("fr-FR", {
+            month: "short",
+            year: "numeric",
           });
 
-          this.drawSummaryStat(doc, col2X, currentY,
-            'Période d\'embauche', `${earliestFormatted} - ${latestFormatted}`,
-            colors.accent, fonts);
+          this.drawSummaryStat(doc, col2X, currentY, "Période d'embauche", `${earliestFormatted} - ${latestFormatted}`, colors.accent, fonts);
         }
         break;
 
-      case 'clients':
+      case "clients":
         // Column 1
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Nombre total de clients', data.length.toString(),
-          colors.primary, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Nombre total de clients", data.length.toString(), colors.primary, fonts);
 
         // Column 2 - Get active clients (visited in last 3 months)
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
         let activeClients = 0;
-        data.forEach(client => {
+        data.forEach((client) => {
           if (client.lastVisit) {
             const visitDate = new Date(client.lastVisit);
             if (visitDate >= threeMonthsAgo) activeClients++;
           }
         });
 
-        this.drawSummaryStat(doc, col2X, currentY,
-          'Clients actifs (3 mois)', activeClients.toString(),
-          colors.accent, fonts);
+        this.drawSummaryStat(doc, col2X, currentY, "Clients actifs (3 mois)", activeClients.toString(), colors.accent, fonts);
         break;
 
-      case 'pharmacy-reviews':
+      case "pharmacy-reviews":
         const avgRating = this.calculateAverageRating(data);
 
         // Column 1
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Nombre total d\'avis', data.length.toString(),
-          colors.primary, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Nombre total d'avis", data.length.toString(), colors.primary, fonts);
 
         // Move to next row
         currentY += 30;
 
         // Get positive ratings (4-5 stars)
-        const positiveRatings = data.filter(item => {
+        const positiveRatings = data.filter((item) => {
           const rating = parseFloat(item.rating);
           return rating >= 4;
         }).length;
@@ -1013,65 +1004,55 @@ export default class ReportService extends BaseService<
         const satisfactionRate = Math.round((positiveRatings / data.length) * 100);
 
         // Column 1, row 2
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Note moyenne', `${avgRating}/5`,
-          colors.accent, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Note moyenne", `${avgRating}/5`, colors.accent, fonts);
 
         // Column 2, row 2
-        this.drawSummaryStat(doc, col2X, currentY,
-          'Taux de satisfaction', `${satisfactionRate}%`,
-          satisfactionRate >= 75 ? colors.success : colors.warning, fonts);
+        this.drawSummaryStat(doc, col2X, currentY, "Taux de satisfaction", `${satisfactionRate}%`, satisfactionRate >= 75 ? colors.success : colors.warning, fonts);
         break;
 
-      case 'employee-reviews':
-      case 'specific-employee-reviews':
+      case "employee-reviews":
+      case "specific-employee-reviews":
         const avgEmpRating = this.calculateAverageRating(data);
 
         // Column 1
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Nombre total d\'avis', data.length.toString(),
-          colors.primary, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Nombre total d'avis", data.length.toString(), colors.primary, fonts);
 
         // Column 2
-        this.drawSummaryStat(doc, col2X, currentY,
-          'Note moyenne', `${avgEmpRating}/5`,
-          parseFloat(avgEmpRating) >= 4 ? colors.success :
-            (parseFloat(avgEmpRating) >= 3 ? colors.warning : colors.error),
-          fonts);
+        this.drawSummaryStat(
+          doc,
+          col2X,
+          currentY,
+          "Note moyenne",
+          `${avgEmpRating}/5`,
+          parseFloat(avgEmpRating) >= 4 ? colors.success : parseFloat(avgEmpRating) >= 3 ? colors.warning : colors.error,
+          fonts
+        );
 
         // For specific employee reviews, add more detailed stats
-        if (type === 'specific-employee-reviews' && data.length > 0) {
+        if (type === "specific-employee-reviews" && data.length > 0) {
           // Get employee name
-          const employeeName = data[0].employee || '';
+          const employeeName = data[0].employee || "";
 
           currentY += 30;
 
           // Count comments
-          const commentsCount = data.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
+          const commentsCount = data.filter((item) => item.comment && item.comment !== "Aucun commentaire").length;
 
           // Draw stats
-          this.drawSummaryStat(doc, col1X, currentY,
-            'Employé évalué', employeeName,
-            colors.text, fonts);
+          this.drawSummaryStat(doc, col1X, currentY, "Employé évalué", employeeName, colors.text, fonts);
 
-          this.drawSummaryStat(doc, col2X, currentY,
-            'Avis avec commentaires', `${commentsCount}/${data.length}`,
-            colors.accent, fonts);
+          this.drawSummaryStat(doc, col2X, currentY, "Avis avec commentaires", `${commentsCount}/${data.length}`, colors.accent, fonts);
         }
         break;
 
-      case 'suggestions':
+      case "suggestions":
         // Column 1
-        this.drawSummaryStat(doc, col1X, currentY,
-          'Nombre total de suggestions', data.length.toString(),
-          colors.primary, fonts);
+        this.drawSummaryStat(doc, col1X, currentY, "Nombre total de suggestions", data.length.toString(), colors.primary, fonts);
 
         // Column 2 - Count processed vs new suggestions
-        const processedSuggestions = data.filter(item => item.status === 'Traité').length;
+        const processedSuggestions = data.filter((item) => item.status === "Traité").length;
 
-        this.drawSummaryStat(doc, col2X, currentY,
-          'Suggestions traitées', `${processedSuggestions}/${data.length}`,
-          colors.accent, fonts);
+        this.drawSummaryStat(doc, col2X, currentY, "Suggestions traitées", `${processedSuggestions}/${data.length}`, colors.accent, fonts);
         break;
     }
 
@@ -1079,277 +1060,378 @@ export default class ReportService extends BaseService<
     const noticeY = summaryStartY + estimatedHeight - 30;
 
     // Add document security icon
-    doc.rect(50, noticeY, 12, 15)
-      .lineWidth(0.5)
-      .stroke(colors.lightText);
+    doc.rect(50, noticeY, 12, 15).lineWidth(0.5).stroke(colors.lightText);
 
     // Add lock icon inside document
-    doc.circle(56, noticeY + 7, 2)
-      .fill(colors.lightText);
+    doc.circle(56, noticeY + 7, 2).fill(colors.lightText);
 
-    doc.moveTo(56, noticeY + 7)
+    doc
+      .moveTo(56, noticeY + 7)
       .lineTo(56, noticeY + 10)
       .stroke(colors.lightText);
 
-    doc.fontSize(8).font(fonts.italic).fillColor(colors.lightText)
-      .text('DOCUMENT CONFIDENTIEL - Réservé à un usage interne. Ne pas diffuser sans autorisation.',
-        70, noticeY + 4);
+    doc
+      .fontSize(8)
+      .font(fonts.italic)
+      .fillColor(colors.lightText)
+      .text("DOCUMENT CONFIDENTIEL - Réservé à un usage interne. Ne pas diffuser sans autorisation.", 70, noticeY + 4);
   }
 
   /**
    * Helper to draw a summary statistic with consistent styling
    */
-  private drawSummaryStat(
-    doc: PDFKit.PDFDocument,
-    x: number,
-    y: number,
-    label: string,
-    value: string,
-    valueColor: string,
-    fonts: any
-  ): void {
+  private drawSummaryStat(doc: PDFKit.PDFDocument, x: number, y: number, label: string, value: string, valueColor: string, fonts: any): void {
     // Draw label
-    doc.fontSize(9).font(fonts.body).fillColor('#6B7280')
-      .text(label, x, y);
+    doc.fontSize(9).font(fonts.body).fillColor("#6B7280").text(label, x, y);
 
     // Draw value with emphasis
-    doc.fontSize(16).font(fonts.bold).fillColor(valueColor)
+    doc
+      .fontSize(16)
+      .font(fonts.bold)
+      .fillColor(valueColor)
       .text(value, x, y + 12);
   }
 
   /**
    * Draw employee summary section with statistics
    */
-  private drawEmployeeSummary(
-    doc: PDFKit.PDFDocument,
-    employeeName: string,
-    employeeReviews: any[],
-    yPos: number,
-    colors: any,
-    fonts: any
-  ): number {
-    // Calculate statistics for this employee
-    const avgRating = this.calculateAverageRating(employeeReviews);
-    const totalReviews = employeeReviews.length;
-    const negativeReviews = this.getNegativeReviews(employeeReviews);
-    const negativeCount = negativeReviews.length;
-    const commentsCount = employeeReviews.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
-    
-    // Get rating distribution
-    const ratingDistribution = [0, 0, 0, 0, 0]; // 1-5 stars
-    employeeReviews.forEach(review => {
-      const rating = parseInt(review.rating);
-      if (rating >= 1 && rating <= 5) {
-        ratingDistribution[rating - 1]++;
-      }
-    });
-    
-    // Draw employee name header
-    doc.fontSize(14).font(fonts.bold).fillColor(colors.primary)
-      .text(employeeName, 50, yPos);
-    
-    yPos += 25;
-    
-    // Draw summary container with border
-    const summaryWidth = 500;
-    const summaryHeight = 60;
-    doc.roundedRect(50, yPos, summaryWidth, summaryHeight, 5)
-      .lineWidth(1)
-      .stroke(colors.border);
-    
-    // Add subtle background
-    doc.rect(50, yPos, summaryWidth, summaryHeight)
-      .fill('#F8F9FA');
-    
-    // Create 4-column layout for stats
-    const colWidth = summaryWidth / 4;
-    const stats = [
-      { label: 'Total avis', value: totalReviews.toString(), color: colors.primary },
-      { label: 'Note moyenne', value: `${avgRating}/5`, color: parseFloat(avgRating) >= 4 ? colors.success : (parseFloat(avgRating) >= 3 ? colors.warning : colors.error) },
-      { label: 'Avis négatifs', value: `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`, color: colors.error },
-      { label: 'Avec commentaires', value: `${commentsCount}/${totalReviews}`, color: colors.accent }
-    ];
-    
-    stats.forEach((stat, index) => {
-      const x = 50 + (index * colWidth);
-      this.drawSummaryStat(doc, x + 10, yPos + 15, stat.label, stat.value, stat.color, fonts);
-    });
-    
-    // Add rating distribution bar chart
-    yPos += summaryHeight + 15;
-    
-    doc.fontSize(10).font(fonts.bold).fillColor(colors.text)
-      .text('Répartition des notes:', 50, yPos);
-    
-    yPos += 15;
-    
-    const barWidth = 80;
-    const barHeight = 20;
-    const maxCount = Math.max(...ratingDistribution);
-    
-    ratingDistribution.forEach((count, index) => {
-      const x = 50 + (index * (barWidth + 10));
-      const barFillWidth = maxCount > 0 ? (count / maxCount) * (barWidth - 30) : 0;
-      
-      // Draw bar background
-      // doc.rect(x + 30, yPos, barWidth - 30, barHeight)
-      //   .fill('#E5E7EB');
-      
-      // Draw filled portion
-      // if (barFillWidth > 0) {
-      //   const barColor = index >= 3 ? colors.success : (index >= 2 ? colors.warning : colors.error);
-      //   doc.rect(x + 30, yPos, barFillWidth, barHeight)
-      //     .fill(barColor);
-      // }
-      
-      // Draw star rating label
-      doc.fontSize(9).font(fonts.body).fillColor(colors.text)
-        .text(`${index + 1} étoile`+ (index + 1 === 1 ? ' :' : 's :'), x, yPos + 5);
-      
-      // Draw count
-      doc.fontSize(9).font(fonts.bold).fillColor((index + 1) >= 3 ? colors.success : (index + 1 >= 2 ? colors.warning : colors.error))
-        .text(count.toString(), x + 37, yPos + 5);
-    });
-    
-    return yPos + 40; // Return new Y position
-  }
+  // private drawEmployeeSummary(
+  //   doc: PDFKit.PDFDocument,
+  //   employeeName: string,
+  //   employeeReviews: any[],
+  //   yPos: number,
+  //   colors: any,
+  //   fonts: any
+  // ): number {
+  //   // Calculate statistics for this employee
+  //   const avgRating = this.calculateAverageRating(employeeReviews);
+  //   const totalReviews = employeeReviews.length;
+  //   const negativeReviews = this.getNegativeReviews(employeeReviews);
+  //   const negativeCount = negativeReviews.length;
+  //   const commentsCount = employeeReviews.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
+
+  //   // Get rating distribution
+  //   const ratingDistribution = [0, 0, 0, 0, 0]; // 1-5 stars
+  //   employeeReviews.forEach(review => {
+  //     const rating = parseInt(review.rating);
+  //     if (rating >= 1 && rating <= 5) {
+  //       ratingDistribution[rating - 1]++;
+  //     }
+  //   });
+
+  //   // Draw employee name header
+  //   doc.fontSize(14).font(fonts.bold).fillColor(colors.primary)
+  //     .text(employeeName, 50, yPos);
+
+  //   yPos += 25;
+
+  //   // Draw summary container with border
+  //   const summaryWidth = 500;
+  //   const summaryHeight = 60;
+  //   doc.roundedRect(50, yPos, summaryWidth, summaryHeight, 5)
+  //     .lineWidth(1)
+  //     .stroke(colors.border);
+
+  //   // Add subtle background
+  //   doc.rect(50, yPos, summaryWidth, summaryHeight)
+  //     .fill('#F8F9FA');
+
+  //   // Create 4-column layout for stats
+  //   const colWidth = summaryWidth / 4;
+  //   const stats = [
+  //     { label: 'Total avis', value: totalReviews.toString(), color: colors.primary },
+  //     { label: 'Note moyenne', value: `${avgRating}/5`, color: parseFloat(avgRating) >= 4 ? colors.success : (parseFloat(avgRating) >= 3 ? colors.warning : colors.error) },
+  //     { label: 'Avis négatifs', value: `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`, color: colors.error },
+  //     { label: 'Avec commentaires', value: `${commentsCount}/${totalReviews}`, color: colors.accent }
+  //   ];
+
+  //   stats.forEach((stat, index) => {
+  //     const x = 50 + (index * colWidth);
+  //     this.drawSummaryStat(doc, x + 10, yPos + 15, stat.label, stat.value, stat.color, fonts);
+  //   });
+
+  //   // Add rating distribution bar chart
+  //   yPos += summaryHeight + 15;
+
+  //   doc.fontSize(10).font(fonts.bold).fillColor(colors.text)
+  //     .text('Répartition des notes:', 50, yPos);
+
+  //   yPos += 15;
+
+  //   const barWidth = 80;
+  //   const barHeight = 20;
+  //   const maxCount = Math.max(...ratingDistribution);
+
+  //   ratingDistribution.forEach((count, index) => {
+  //     const x = 50 + (index * (barWidth + 10));
+  //     const barFillWidth = maxCount > 0 ? (count / maxCount) * (barWidth - 30) : 0;
+
+  //     // Draw bar background
+  //     // doc.rect(x + 30, yPos, barWidth - 30, barHeight)
+  //     //   .fill('#E5E7EB');
+
+  //     // Draw filled portion
+  //     // if (barFillWidth > 0) {
+  //     //   const barColor = index >= 3 ? colors.success : (index >= 2 ? colors.warning : colors.error);
+  //     //   doc.rect(x + 30, yPos, barFillWidth, barHeight)
+  //     //     .fill(barColor);
+  //     // }
+
+  //     // Draw star rating label
+  //     doc.fontSize(9).font(fonts.body).fillColor(colors.text)
+  //       .text(`${index + 1} étoile`+ (index + 1 === 1 ? ' :' : 's :'), x, yPos + 5);
+
+  //     // Draw count
+  //     doc.fontSize(9).font(fonts.bold).fillColor((index + 1) >= 3 ? colors.success : (index + 1 >= 2 ? colors.warning : colors.error))
+  //       .text(count.toString(), x + 37, yPos + 5);
+  //   });
+
+  //   return yPos + 40; // Return new Y position
+  // }
 
   /**
    * Draw negative reviews table for an employee
    */
-  private drawNegativeReviewsTable(
-    doc: PDFKit.PDFDocument,
-    employeeName: string,
-    negativeReviews: any[],
-    yPos: number,
-    colors: any,
-    fonts: any
-  ): number {
-    if (negativeReviews.length === 0) {
-      doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText)
-        .text('Aucun avis négatif trouvé pour cet employé.', 50, yPos);
-      return yPos + 20;
-    }
-    
-    // Draw section title
-    doc.fontSize(12).font(fonts.bold).fillColor(colors.text)
-      .text(`Avis négatifs - ${employeeName} (${negativeReviews.length})`, 50, yPos);
-    
-    yPos += 20;
-    
-    // Table setup
-    const tableWidth = 500;
-    const colWidths = [80, 60, 60, 300]; // Date, Note, Client, Commentaire
-    const xPos = 50;
-    
-    // Draw table header
-    const headerHeight = 30;
-    doc.rect(xPos, yPos, tableWidth, headerHeight)
-      .fill(colors.primary);
-    
-    // Draw headers
-    doc.fillColor('white').fontSize(10).font(fonts.bold);
-    const headers = ['Date', 'Note', 'Client', 'Commentaire'];
-    headers.forEach((header, i) => {
-      let xOffset = xPos;
-      for (let j = 0; j < i; j++) {
-        xOffset += colWidths[j];
-      }
-      doc.text(header, xOffset + 5, yPos + 10, {
-        width: colWidths[i] - 10,
-        align: 'center'
-      });
-    });
-    
-    yPos += headerHeight;
-    
-    // Draw table rows
-    negativeReviews.forEach((review, index) => {
-      const rowHeight = 25;
-      
-      // Alternate row colors
-      if (index % 2 === 0) {
-        doc.rect(xPos, yPos, tableWidth, rowHeight)
-          .fill('#FEF2F2');
-      }
-      
-      // Draw borders
-      doc.rect(xPos, yPos, tableWidth, rowHeight)
-        .lineWidth(0.5)
-        .stroke(colors.border);
-      
-      // Format row data
-      const rowData = [
-        review.date || '-',
-        review.rating || '-',
-        review.client || 'Client anonyme',
-        (review.comment && review.comment.length > 80) ? `${review.comment.substring(0, 77)}...` : (review.comment || '-')
-      ];
-      
-      // Draw cell content
-      doc.fontSize(9).font(fonts.body).fillColor(colors.text);
-      rowData.forEach((cell, i) => {
-        let xOffset = xPos;
-        for (let j = 0; j < i; j++) {
-          xOffset += colWidths[j];
-        }
-        doc.text(cell, xOffset + 5, yPos + 5, {
-          width: colWidths[i] - 10,
-          align: 'center'
-        });
-      });
-      
-      // Draw horizontal divider between rows - more subtle than full grid
-      doc.lineWidth(0.2).strokeColor(colors.border);
-      doc.moveTo(xPos, yPos + rowHeight)
-        .lineTo(xPos + tableWidth, yPos + rowHeight)
-        .stroke();
+  // private drawNegativeReviewsTable(
+  //   doc: PDFKit.PDFDocument,
+  //   employeeName: string,
+  //   negativeReviews: any[],
+  //   yPos: number,
+  //   colors: any,
+  //   fonts: any
+  // ): number {
+  //   if (negativeReviews.length === 0) {
+  //     doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText)
+  //       .text('Aucun avis négatif trouvé pour cet employé.', 50, yPos);
+  //     return yPos + 20;
+  //   }
 
-      // Draw column separators - subtle vertical lines
-      let xLine = xPos;
-      for (let i = 1; i < 4; i++) {
-        xLine += colWidths[i - 1];
-        doc.moveTo(xLine, yPos)
-          .lineTo(xLine, yPos + rowHeight)
-          .stroke();
-      }
+  //   // Draw section title
+  //   doc.fontSize(12).font(fonts.bold).fillColor(colors.text)
+  //     .text(`Avis négatifs - ${employeeName} (${negativeReviews.length})`, 50, yPos);
 
-      yPos += rowHeight;
+  //   yPos += 20;
 
-    });
-    
-    return yPos + 10;
-  }
+  //   // Table setup
+  //   const tableWidth = 500;
+  //   const colWidths = [80, 60, 60, 300]; // Date, Note, Client, Commentaire
+  //   const xPos = 50;
+
+  //   // Draw table header
+  //   const headerHeight = 30;
+  //   doc.rect(xPos, yPos, tableWidth, headerHeight)
+  //     .fill(colors.primary);
+
+  //   // Draw headers
+  //   doc.fillColor('white').fontSize(10).font(fonts.bold);
+  //   const headers = ['Date', 'Note', 'Client', 'Commentaire'];
+  //   headers.forEach((header, i) => {
+  //     let xOffset = xPos;
+  //     for (let j = 0; j < i; j++) {
+  //       xOffset += colWidths[j];
+  //     }
+  //     doc.text(header, xOffset + 5, yPos + 10, {
+  //       width: colWidths[i] - 10,
+  //       align: 'center'
+  //     });
+  //   });
+
+  //   yPos += headerHeight;
+
+  //   // Draw table rows
+  //   negativeReviews.forEach((review, index) => {
+  //     const rowHeight = 25;
+
+  //     // Alternate row colors
+  //     if (index % 2 === 0) {
+  //       doc.rect(xPos, yPos, tableWidth, rowHeight)
+  //         .fill('#FEF2F2');
+  //     }
+
+  //     // Draw borders
+  //     doc.rect(xPos, yPos, tableWidth, rowHeight)
+  //       .lineWidth(0.5)
+  //       .stroke(colors.border);
+
+  //     // Format row data
+  //     const rowData = [
+  //       review.date || '-',
+  //       review.rating || '-',
+  //       review.client || 'Client anonyme',
+  //       (review.comment && review.comment.length > 80) ? `${review.comment.substring(0, 77)}...` : (review.comment || '-')
+  //     ];
+
+  //     // Draw cell content
+  //     doc.fontSize(9).font(fonts.body).fillColor(colors.text);
+  //     rowData.forEach((cell, i) => {
+  //       let xOffset = xPos;
+  //       for (let j = 0; j < i; j++) {
+  //         xOffset += colWidths[j];
+  //       }
+  //       doc.text(cell, xOffset + 5, yPos + 5, {
+  //         width: colWidths[i] - 10,
+  //         align: 'center'
+  //       });
+  //     });
+
+  //     // Draw horizontal divider between rows - more subtle than full grid
+  //     doc.lineWidth(0.2).strokeColor(colors.border);
+  //     doc.moveTo(xPos, yPos + rowHeight)
+  //       .lineTo(xPos + tableWidth, yPos + rowHeight)
+  //       .stroke();
+
+  //     // Draw column separators - subtle vertical lines
+  //     let xLine = xPos;
+  //     for (let i = 1; i < 4; i++) {
+  //       xLine += colWidths[i - 1];
+  //       doc.moveTo(xLine, yPos)
+  //         .lineTo(xLine, yPos + rowHeight)
+  //         .stroke();
+  //     }
+
+  //     yPos += rowHeight;
+
+  //   });
+
+  //   return yPos + 10;
+  // }
+
+  /**
+   * Draw positive reviews table for an employee
+   */
+  // private drawPositiveReviewsTable(
+  //   doc: PDFKit.PDFDocument,
+  //   employeeName: string,
+  //   positiveReviews: any[],
+  //   yPos: number,
+  //   colors: any,
+  //   fonts: any
+  // ): number {
+  //   if (positiveReviews.length === 0) {
+  //     doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText)
+  //       .text('Aucun avis positif trouvé pour cet employé.', 50, yPos);
+  //     return yPos + 20;
+  //   }
+
+  //   // Draw section title
+  //   doc.fontSize(12).font(fonts.bold).fillColor(colors.text)
+  //     .text(`Avis positifs - ${employeeName} (${positiveReviews.length})`, 50, yPos);
+
+  //   yPos += 20;
+
+  //   // Table setup
+  //   const tableWidth = 500;
+  //   const colWidths = [80, 60, 60, 300]; // Date, Note, Client, Commentaire
+  //   const xPos = 50;
+
+  //   // Draw table header
+  //   const headerHeight = 30;
+  //   doc.rect(xPos, yPos, tableWidth, headerHeight)
+  //     .fill(colors.primary);
+
+  //   // Draw headers
+  //   doc.fillColor('white').fontSize(10).font(fonts.bold);
+  //   const headers = ['Date', 'Note', 'Client', 'Commentaire'];
+  //   headers.forEach((header, i) => {
+  //     let xOffset = xPos;
+  //     for (let j = 0; j < i; j++) {
+  //       xOffset += colWidths[j];
+  //     }
+  //     doc.text(header, xOffset + 5, yPos + 10, {
+  //       width: colWidths[i] - 10,
+  //       align: 'center'
+  //     });
+  //   });
+
+  //   yPos += headerHeight;
+
+  //   // Draw table rows
+  //   positiveReviews.forEach((review, index) => {
+  //     const rowHeight = 25;
+
+  //     // Alternate row colors
+  //     if (index % 2 === 0) {
+  //       doc.rect(xPos, yPos, tableWidth, rowHeight)
+  //         .fill('#FEF2F2');
+  //     }
+
+  //     // Draw borders
+  //     doc.rect(xPos, yPos, tableWidth, rowHeight)
+  //       .lineWidth(0.5)
+  //       .stroke(colors.border);
+
+  //     // Format row data
+  //     const rowData = [
+  //       review.date || '-',
+  //       review.rating || '-',
+  //       review.client || 'Client anonyme',
+  //       (review.comment && review.comment.length > 80) ? `${review.comment.substring(0, 77)}...` : (review.comment || '-')
+  //     ];
+
+  //     // Draw cell content
+  //     doc.fontSize(9).font(fonts.body).fillColor(colors.text);
+  //     rowData.forEach((cell, i) => {
+  //       let xOffset = xPos;
+  //       for (let j = 0; j < i; j++) {
+  //         xOffset += colWidths[j];
+  //       }
+  //       doc.text(cell, xOffset + 5, yPos + 5, {
+  //         width: colWidths[i] - 10,
+  //         align: 'center'
+  //       });
+  //     });
+
+  //     // Draw horizontal divider between rows - more subtle than full grid
+  //     doc.lineWidth(0.2).strokeColor(colors.border);
+  //     doc.moveTo(xPos, yPos + rowHeight)
+  //       .lineTo(xPos + tableWidth, yPos + rowHeight)
+  //       .stroke();
+
+  //     // Draw column separators - subtle vertical lines
+  //     let xLine = xPos;
+  //     for (let i = 1; i < 4; i++) {
+  //       xLine += colWidths[i - 1];
+  //       doc.moveTo(xLine, yPos)
+  //         .lineTo(xLine, yPos + rowHeight)
+  //         .stroke();
+  //     }
+
+  //     yPos += rowHeight;
+
+  //   });
+
+  //   return yPos + 10;
+  // }
 
   /**
    * Group employee reviews by employee name
    */
   private groupReviewsByEmployee(reviews: any[]): Map<string, any[]> {
     const groupedReviews = new Map<string, any[]>();
-    
-    reviews.forEach(review => {
-      let employeeName = 'Employé inconnu';
-      
+
+    reviews.forEach((review) => {
+      let employeeName = "Employé inconnu";
+
       // Extract employee name from different possible formats
       if (review.employee) {
-        if (typeof review.employee === 'string') {
+        if (typeof review.employee === "string") {
           employeeName = review.employee;
         } else if (review.employee.firstName || review.employee.lastName) {
-          employeeName = `${review.employee.lastName || ''} ${review.employee.firstName || ''}`.trim();
+          employeeName = `${review.employee.lastName || ""} ${review.employee.firstName || ""}`.trim();
         }
       } else if (review.employeeName) {
         employeeName = review.employeeName;
       }
-      
+
       // Create array for this employee if it doesn't exist
       if (!groupedReviews.has(employeeName)) {
         groupedReviews.set(employeeName, []);
       }
-      
+
       // Add review to employee's array
       groupedReviews.get(employeeName)!.push(review);
     });
-    
+
     return groupedReviews;
   }
 
@@ -1357,9 +1439,19 @@ export default class ReportService extends BaseService<
    * Get negative reviews (rating <= 2) from a list of reviews
    */
   private getNegativeReviews(reviews: any[]): any[] {
-    return reviews.filter(review => {
+    return reviews.filter((review) => {
       const rating = parseFloat(review.rating);
       return !isNaN(rating) && rating <= 2;
+    });
+  }
+
+  /**
+   * Get positive reviews (rating >= 3) from a list of reviews
+   */
+  private getPositiveReviews(reviews: any[]): any[] {
+    return reviews.filter((review) => {
+      const rating = parseFloat(review.rating);
+      return !isNaN(rating) && rating >= 3;
     });
   }
 
@@ -1367,12 +1459,12 @@ export default class ReportService extends BaseService<
    * Calculate average rating from data array
    */
   private calculateAverageRating(data: any[]): string {
-    if (!data || data.length === 0) return '0';
+    if (!data || data.length === 0) return "0";
 
     let sum = 0;
     let count = 0;
 
-    data.forEach(item => {
+    data.forEach((item) => {
       const rating = parseFloat(item.rating);
       if (!isNaN(rating)) {
         sum += rating;
@@ -1380,192 +1472,289 @@ export default class ReportService extends BaseService<
       }
     });
 
-    return count > 0 ? (sum / count).toFixed(1) : '0';
+    return count > 0 ? (sum / count).toFixed(1) : "0";
   }
 
   /**
    * Generate an Excel report using ExcelJS
    */
-  private async generateExcelReport(
-    filePath: string,
-    reportName: string,
-    data: any[],
-    type: IReport['type'],
-    dateRange?: { start: Date; end: Date }
-  ): Promise<void> {
+  private async generateExcelReport(filePath: string, reportName: string, data: any[], type: IReport["type"], dateRange?: { start: Date; end: Date }, sentimentFilter?: string): Promise<void> {
     try {
       // Create a new workbook and worksheet
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(reportName.substring(0, 31)); // Excel has 31 char limit for sheet names
 
       // Add title
-      worksheet.mergeCells('A1:F1');
-      const titleCell = worksheet.getCell('A1');
+      worksheet.mergeCells("A1:F1");
+      const titleCell = worksheet.getCell("A1");
       titleCell.value = reportName;
       titleCell.font = { size: 16, bold: true };
-      titleCell.alignment = { horizontal: 'center' };
+      titleCell.alignment = { horizontal: "center" };
 
       // Add date range if provided - always include this section with clear message
-      worksheet.mergeCells('A2:F2');
-      const dateRangeCell = worksheet.getCell('A2');
+      worksheet.mergeCells("A2:F2");
+      const dateRangeCell = worksheet.getCell("A2");
 
       if (dateRange) {
-        const startDate = dateRange.start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-        const endDate = dateRange.end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        const startDate = dateRange.start.toLocaleDateString("fr-FR", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        const endDate = dateRange.end.toLocaleDateString("fr-FR", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
         dateRangeCell.value = `Période du rapport: ${startDate} au ${endDate}`;
 
         // Highlight the date range with a color fill
         dateRangeCell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFE8F4F4' } // Light cyan background
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFE8F4F4" }, // Light cyan background
         };
       } else {
-        dateRangeCell.value = 'Période: Toutes les données disponibles';
+        dateRangeCell.value = "Période: Toutes les données disponibles";
       }
 
       dateRangeCell.font = { size: 12, bold: true };
-      dateRangeCell.alignment = { horizontal: 'center' };
+      dateRangeCell.alignment = { horizontal: "center" };
 
       // Add generation date
-      worksheet.mergeCells('A3:F3');
-      const genDateCell = worksheet.getCell('A3');
-      genDateCell.value = `Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`;
+      worksheet.mergeCells("A3:F3");
+      const genDateCell = worksheet.getCell("A3");
+      genDateCell.value = `Généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")}`;
       genDateCell.font = { size: 10 };
-      genDateCell.alignment = { horizontal: 'right' };
+      genDateCell.alignment = { horizontal: "right" };
 
       // Add some space
       worksheet.addRow([]);
 
       // Special handling for employee reviews - use grouped structure
-      if (type === 'employee-reviews' || type === 'specific-employee-reviews') {
+      if (type === "employee-reviews" || type === "specific-employee-reviews") {
         // Group reviews by employee
         const groupedReviews = this.groupReviewsByEmployee(data);
         let currentRow = 6; // Start after title and headers
-        
+
+        // Determine which reviews to show based on sentiment filter
+        const showNegative = !sentimentFilter || sentimentFilter === "all" || sentimentFilter === "negative";
+        const showPositive = !sentimentFilter || sentimentFilter === "all" || sentimentFilter === "positive";
+
         // Process each employee
         for (const [employeeName, employeeReviews] of groupedReviews.entries()) {
           // Add employee name as a section header
           worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
           const employeeHeaderCell = worksheet.getCell(`A${currentRow}`);
           employeeHeaderCell.value = `Employé: ${employeeName}`;
-          employeeHeaderCell.font = { size: 14, bold: true, color: { argb: 'FF1C7B80' } };
-          employeeHeaderCell.alignment = { horizontal: 'left' };
+          employeeHeaderCell.font = {
+            size: 14,
+            bold: true,
+            color: { argb: "FF1C7B80" },
+          };
+          employeeHeaderCell.alignment = { horizontal: "left" };
           currentRow++;
-          
+
           // Add summary statistics for this employee
           const avgRating = this.calculateAverageRating(employeeReviews);
           const totalReviews = employeeReviews.length;
           const negativeReviews = this.getNegativeReviews(employeeReviews);
+          const positiveReviews = this.getPositiveReviews(employeeReviews);
           const negativeCount = negativeReviews.length;
-          const commentsCount = employeeReviews.filter(item => item.comment && item.comment !== 'Aucun commentaire').length;
-          
+          const positiveCount = positiveReviews.length;
+          const commentsCount = employeeReviews.filter((item) => item.comment && item.comment !== "Aucun commentaire").length;
+
           // Add summary row
           const summaryData = [
-            'Total avis', totalReviews.toString(),
-            'Note moyenne', avgRating,
-            'Avis négatifs', `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`,
-            'Avec commentaires', `${commentsCount}/${totalReviews}`
+            "Total avis",
+            totalReviews.toString(),
+            "Note moyenne",
+            avgRating,
+            "Avis négatifs",
+            `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`,
+            "Avis positifs",
+            `${positiveCount} (${Math.round((positiveCount / totalReviews) * 100)}%)`,
+            "Avec commentaires",
+            `${commentsCount}/${totalReviews}`,
           ];
-          
+
           // Add summary in two columns
           for (let i = 0; i < summaryData.length; i += 2) {
             const summaryRow = worksheet.addRow([summaryData[i], summaryData[i + 1]]);
             summaryRow.eachCell((cell) => {
               cell.font = { bold: true };
               cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFF0F8FF' } // Light blue background
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FFF0F8FF" }, // Light blue background
               };
               cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
+                top: { style: "thin" },
+                left: { style: "thin" },
+                bottom: { style: "thin" },
+                right: { style: "thin" },
               };
             });
             currentRow++;
           }
-          
+
           // Add space
           worksheet.addRow([]);
           currentRow++;
-          
-          // Add negative reviews section header
-          if (negativeReviews.length > 0) {
-            worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
-            const negativeHeaderCell = worksheet.getCell(`A${currentRow}`);
-            negativeHeaderCell.value = `Avis négatifs (${negativeReviews.length})`;
-            negativeHeaderCell.font = { size: 12, bold: true, color: { argb: 'FFD32F2F' } };
-            negativeHeaderCell.alignment = { horizontal: 'left' };
-            currentRow++;
-            
-            // Add headers for negative reviews table
-            const negativeHeaders = ['Date', 'Note', 'Client', 'Commentaire'];
-            const negativeHeaderRow = worksheet.addRow(negativeHeaders);
-            negativeHeaderRow.font = { bold: true };
-            negativeHeaderRow.eachCell((cell) => {
-              cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD32F2F' } // Red background
-              };
-              cell.font = {
+
+          // Add negative reviews section if applicable
+          if (showNegative) {
+            if (negativeReviews.length > 0) {
+              worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+              const negativeHeaderCell = worksheet.getCell(`A${currentRow}`);
+              negativeHeaderCell.value = `Avis négatifs (${negativeReviews.length})`;
+              negativeHeaderCell.font = {
+                size: 12,
                 bold: true,
-                color: { argb: 'FFFFFFFF' } // White text
+                color: { argb: "FFD32F2F" },
               };
-              cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-              };
-              cell.alignment = {
-                horizontal: 'center',
-                vertical: 'middle'
-              };
-            });
-            currentRow++;
-            
-            // Add negative reviews data
-            negativeReviews.forEach(review => {
-              const negativeRowData = [
-                review.date || '-',
-                review.rating || '-',
-                review.client || 'Client anonyme',
-                review.comment || '-'
-              ];
-              const negativeRow = worksheet.addRow(negativeRowData);
-              negativeRow.eachCell((cell, colNumber) => {
-                cell.border = {
-                  top: { style: 'thin' },
-                  left: { style: 'thin' },
-                  bottom: { style: 'thin' },
-                  right: { style: 'thin' }
+              negativeHeaderCell.alignment = { horizontal: "left" };
+              currentRow++;
+
+              // Add headers for negative reviews table
+              const negativeHeaders = ["Date", "Note", "Client", "Commentaire"];
+              const negativeHeaderRow = worksheet.addRow(negativeHeaders);
+              negativeHeaderRow.font = { bold: true };
+              negativeHeaderRow.eachCell((cell) => {
+                cell.fill = {
+                  type: "pattern",
+                  pattern: "solid",
+                  fgColor: { argb: "FFD32F2F" }, // Red background
                 };
-                if (colNumber <= 2) {
-                  cell.alignment = { horizontal: 'center' };
-                } else {
-                  cell.alignment = { horizontal: 'left', wrapText: true };
-                }
+                cell.font = {
+                  bold: true,
+                  color: { argb: "FFFFFFFF" }, // White text
+                };
+                cell.border = {
+                  top: { style: "thin" },
+                  left: { style: "thin" },
+                  bottom: { style: "thin" },
+                  right: { style: "thin" },
+                };
+                cell.alignment = {
+                  horizontal: "center",
+                  vertical: "middle",
+                };
               });
               currentRow++;
-            });
-          } else {
-            // No negative reviews message
-            worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
-            const noNegativeCell = worksheet.getCell(`A${currentRow}`);
-            noNegativeCell.value = 'Aucun avis négatif trouvé pour cet employé.';
-            noNegativeCell.font = { italic: true, color: { argb: 'FF757575' } };
-            noNegativeCell.alignment = { horizontal: 'center' };
+
+              // Add negative reviews data
+              negativeReviews.forEach((review) => {
+                const negativeRowData = [review.date || "-", review.rating || "-", review.client || "Client anonyme", review.comment || "-"];
+                const negativeRow = worksheet.addRow(negativeRowData);
+                negativeRow.eachCell((cell, colNumber) => {
+                  cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                  };
+                  if (colNumber <= 2) {
+                    cell.alignment = { horizontal: "center" };
+                  } else {
+                    cell.alignment = { horizontal: "left", wrapText: true };
+                  }
+                });
+                currentRow++;
+              });
+            } else {
+              // No negative reviews message
+              worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+              const noNegativeCell = worksheet.getCell(`A${currentRow}`);
+              noNegativeCell.value = "Aucun avis négatif trouvé pour cet employé.";
+              noNegativeCell.font = { italic: true, color: { argb: "FF757575" } };
+              noNegativeCell.alignment = { horizontal: "center" };
+              currentRow++;
+            }
+
+            // Add space after negative reviews
+            worksheet.addRow([]);
             currentRow++;
           }
-          
-          // Add space between employees
+
+          // Add positive reviews section if applicable
+          if (showPositive) {
+            if (positiveReviews.length > 0) {
+              worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+              const positiveHeaderCell = worksheet.getCell(`A${currentRow}`);
+              positiveHeaderCell.value = `Avis positifs (${positiveReviews.length})`;
+              positiveHeaderCell.font = {
+                size: 12,
+                bold: true,
+                color: { argb: "FF4CAF50" }, // Green color
+              };
+              positiveHeaderCell.alignment = { horizontal: "left" };
+              currentRow++;
+
+              // Add headers for positive reviews table
+              const positiveHeaders = ["Date", "Note", "Client", "Commentaire"];
+              const positiveHeaderRow = worksheet.addRow(positiveHeaders);
+              positiveHeaderRow.font = { bold: true };
+              positiveHeaderRow.eachCell((cell) => {
+                cell.fill = {
+                  type: "pattern",
+                  pattern: "solid",
+                  fgColor: { argb: "FF4CAF50" }, // Green background
+                };
+                cell.font = {
+                  bold: true,
+                  color: { argb: "FFFFFFFF" }, // White text
+                };
+                cell.border = {
+                  top: { style: "thin" },
+                  left: { style: "thin" },
+                  bottom: { style: "thin" },
+                  right: { style: "thin" },
+                };
+                cell.alignment = {
+                  horizontal: "center",
+                  vertical: "middle",
+                };
+              });
+              currentRow++;
+
+              // Add positive reviews data
+              positiveReviews.forEach((review) => {
+                const positiveRowData = [review.date || "-", review.rating || "-", review.client || "Client anonyme", review.comment || "-"];
+                const positiveRow = worksheet.addRow(positiveRowData);
+                positiveRow.eachCell((cell, colNumber) => {
+                  cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                  };
+                  if (colNumber <= 2) {
+                    cell.alignment = { horizontal: "center" };
+                  } else {
+                    cell.alignment = { horizontal: "left", wrapText: true };
+                  }
+                });
+                currentRow++;
+              });
+            } else {
+              // No positive reviews message
+              worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+              const noPositiveCell = worksheet.getCell(`A${currentRow}`);
+              noPositiveCell.value = "Aucun avis positif trouvé pour cet employé.";
+              noPositiveCell.font = { italic: true, color: { argb: "FF757575" } };
+              noPositiveCell.alignment = { horizontal: "center" };
+              currentRow++;
+            }
+
+            // Add space after positive reviews
+            worksheet.addRow([]);
+            currentRow++;
+          }
+
+          // Add extra space between employees
           worksheet.addRow([]);
-          worksheet.addRow([]);
-          currentRow += 2;
+          currentRow++;
         }
       } else {
         // Standard table for other report types
@@ -1577,23 +1766,23 @@ export default class ReportService extends BaseService<
         // Style header row
         headerRow.eachCell((cell) => {
           cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FF1C7B80' } // Primary color
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FF1C7B80" }, // Primary color
           };
           cell.font = {
             bold: true,
-            color: { argb: 'FFFFFFFF' } // White text
+            color: { argb: "FFFFFFFF" }, // White text
           };
           cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
           };
           cell.alignment = {
-            horizontal: 'center',
-            vertical: 'middle'
+            horizontal: "center",
+            vertical: "middle",
           };
         });
 
@@ -1606,17 +1795,17 @@ export default class ReportService extends BaseService<
           excelRow.eachCell((cell, colNumber) => {
             // Add borders
             cell.border = {
-              top: { style: 'thin' },
-              left: { style: 'thin' },
-              bottom: { style: 'thin' },
-              right: { style: 'thin' }
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
             };
 
             // Align based on content
-            if (typeof cell.value === 'number' || (typeof cell.value === 'string' && cell.value.length < 5)) {
-              cell.alignment = { horizontal: 'center' };
+            if (typeof cell.value === "number" || (typeof cell.value === "string" && cell.value.length < 5)) {
+              cell.alignment = { horizontal: "center" };
             } else {
-              cell.alignment = { horizontal: 'left', wrapText: true };
+              cell.alignment = { horizontal: "left", wrapText: true };
             }
           });
         }
@@ -1624,12 +1813,12 @@ export default class ReportService extends BaseService<
 
       // Set column widths based on content type
       const columnWidths: Record<string, number[]> = {
-        'employees': [20, 20, 35, 20, 20],
-        'clients': [20, 20, 35, 20, 20],
-        'pharmacy-reviews': [20, 10, 50, 20],
-        'employee-reviews': [20, 20, 10, 40, 20],
-        'specific-employee-reviews': [20, 20, 10, 40, 20],
-        'suggestions': [20, 50, 20, 15]
+        employees: [20, 20, 35, 20, 20],
+        clients: [20, 20, 35, 20, 20],
+        "pharmacy-reviews": [20, 10, 50, 20],
+        "employee-reviews": [20, 20, 10, 40, 20],
+        "specific-employee-reviews": [20, 20, 10, 40, 20],
+        suggestions: [20, 50, 20, 15],
       };
 
       // Apply column widths if available for this report type
@@ -1648,14 +1837,14 @@ export default class ReportService extends BaseService<
       const lastRow = worksheet.lastRow?.number ? worksheet.lastRow.number + 2 : 10;
       worksheet.mergeCells(`A${lastRow}:F${lastRow}`);
       const footerCell = worksheet.getCell(`A${lastRow}`);
-      footerCell.value = 'Pharmacie Val d\'Oise - Rapport confidentiel';
+      footerCell.value = "Pharmacie Val d'Oise - Rapport confidentiel";
       footerCell.font = { size: 8, italic: true };
-      footerCell.alignment = { horizontal: 'center' };
+      footerCell.alignment = { horizontal: "center" };
 
       // Write the file
       await workbook.xlsx.writeFile(filePath);
     } catch (error) {
-      logger.error('Error generating Excel report:', error);
+      logger.error("Error generating Excel report:", error);
       throw error;
     }
   }
@@ -1663,118 +1852,91 @@ export default class ReportService extends BaseService<
   /**
    * Get headings for report based on type
    */
-  private getReportHeadings(type: IReport['type']): string[] {
+  private getReportHeadings(type: IReport["type"]): string[] {
     switch (type) {
-      case 'employees':
-        return ['Nom', 'Prénom', 'Email', 'Poste', 'Date d\'embauche'];
-      case 'clients':
-        return ['Nom', 'Prénom', 'Email', 'Téléphone', 'Dernière visite'];
-      case 'pharmacy-reviews':
-        return ['Date', 'Note', 'Commentaire', 'Client'];
-      case 'employee-reviews':
-      case 'specific-employee-reviews':
-        return ['Employé', 'Date', 'Note', 'Commentaire', 'Client'];
-      case 'suggestions':
-        return ['Date', 'Suggestion', 'Client', 'Statut'];
+      case "employees":
+        return ["Nom", "Prénom", "Email", "Poste", "Date d'embauche"];
+      case "clients":
+        return ["Nom", "Prénom", "Email", "Téléphone", "Dernière visite"];
+      case "pharmacy-reviews":
+        return ["Date", "Note", "Commentaire", "Client"];
+      case "employee-reviews":
+      case "specific-employee-reviews":
+        return ["Employé", "Date", "Note", "Commentaire", "Client"];
+      case "suggestions":
+        return ["Date", "Suggestion", "Client", "Statut"];
       default:
-        return ['Nom', 'Description', 'Date'];
+        return ["Nom", "Description", "Date"];
     }
   }
 
   /**
    * Format row data for table display
    */
-  private formatRowData(row: any, type: IReport['type']): any[] {
+  private formatRowData(row: any, type: IReport["type"]): any[] {
     switch (type) {
-      case 'employees':
+      case "employees":
         // Log what we're getting for debugging
         logger.debug(`Formatting employee row: ${JSON.stringify(row)}`);
-        return [
-          row.lastName || '-',
-          row.firstName || '-',
-          row.email || '-',
-          row.position || '-',
-          row.hireDate || '-'
-        ];
-      case 'clients':
-        return [
-          row.lastName || '-',
-          row.firstName || '-',
-          row.email || '-',
-          row.phone || '-',
-          row.lastVisit || '-'
-        ];
-      case 'pharmacy-reviews':
-        return [
-          row.date || '-',
-          row.rating || '-',
-          row.comment || '-',
-          row.client || '-'
-        ];
-      case 'employee-reviews':
-      case 'specific-employee-reviews':
+        return [row.lastName || "-", row.firstName || "-", row.email || "-", row.position || "-", row.hireDate || "-"];
+      case "clients":
+        return [row.lastName || "-", row.firstName || "-", row.email || "-", row.phone || "-", row.lastVisit || "-"];
+      case "pharmacy-reviews":
+        return [row.date || "-", row.rating || "-", row.comment || "-", row.client || "-"];
+      case "employee-reviews":
+      case "specific-employee-reviews":
         // Format employee name properly
-        let employeeDisplay = '-';
+        let employeeDisplay = "-";
         if (row.employee) {
-          if (typeof row.employee === 'string') {
+          if (typeof row.employee === "string") {
             employeeDisplay = row.employee;
           } else if (row.employee.firstName || row.employee.lastName) {
-            employeeDisplay = `${row.employee.lastName || ''} ${row.employee.firstName || ''}`.trim();
+            employeeDisplay = `${row.employee.lastName || ""} ${row.employee.firstName || ""}`.trim();
           }
         }
-        return [
-          employeeDisplay,
-          row.date || '-',
-          row.rating || '-',
-          row.comment || '-',
-          row.client || '-'
-        ];
-      case 'suggestions':
+        return [employeeDisplay, row.date || "-", row.rating || "-", row.comment || "-", row.client || "-"];
+      case "suggestions":
         // Format suggestions data for the report
         return [
-          row.date || '-',
+          row.date || "-",
           // For suggestion text, truncate if too long for better readability in reports
-          (row.text && row.text.length > 100) ? `${row.text.substring(0, 97)}...` : (row.text || '-'),
-          row.client || '-',
-          row.status || '-'
+          row.text && row.text.length > 100 ? `${row.text.substring(0, 97)}...` : row.text || "-",
+          row.client || "-",
+          row.status || "-",
         ];
       default:
-        return [
-          row.name || '-',
-          row.description || '-',
-          row.date || '-'
-        ];
+        return [row.name || "-", row.description || "-", row.date || "-"];
     }
   }
 
   /**
    * Get sample data for report based on type
    */
-  private async getReportData(type: IReport['type'], dateRange?: { start: Date; end: Date }, employeeId?: string, sentimentFilter?: string): Promise<any[]> {
+  private async getReportData(type: IReport["type"], dateRange?: { start: Date; end: Date }, employeeId?: string, sentimentFilter?: string): Promise<any[]> {
     // In a production environment, we only return real data from the database
 
     switch (type) {
-      case 'employees': {
+      case "employees": {
         // Try to get real employee data
         try {
-          logger.info('Fetching employee data for report');
+          logger.info("Fetching employee data for report");
           const employees = await userService.getAllEmployees();
 
           logger.info(`Retrieved ${employees?.length || 0} employees from database`);
 
           if (employees && employees.length > 0) {
             // Map the employee data to the format expected by the report
-            const formattedEmployees = employees.map(emp => {
+            const formattedEmployees = employees.map((emp) => {
               // Use position entity title if available, fallback to deprecated currentPosition
-              const positionTitle = (emp.position as any)?.title || emp.currentPosition || 'Employé';
+              const positionTitle = (emp.position as any)?.title || emp.currentPosition || "Employé";
 
               const formattedEmp = {
-                id: emp._id?.toString() || '',
-                firstName: emp.firstName || '',
-                lastName: emp.lastName || '',
-                email: emp.email || '',
+                id: emp._id?.toString() || "",
+                firstName: emp.firstName || "",
+                lastName: emp.lastName || "",
+                email: emp.email || "",
                 position: positionTitle,
-                hireDate: emp.createdAt ? new Date(emp.createdAt).toLocaleDateString('fr-FR') : ''
+                hireDate: emp.createdAt ? new Date(emp.createdAt).toLocaleDateString("fr-FR") : "",
               };
 
               // Log each employee for debugging
@@ -1786,9 +1948,9 @@ export default class ReportService extends BaseService<
             // Filter by date range if provided (using createdAt/hireDate)
             let filteredEmployees = formattedEmployees;
             if (dateRange) {
-              filteredEmployees = formattedEmployees.filter(emp => {
+              filteredEmployees = formattedEmployees.filter((emp) => {
                 if (!emp.hireDate) return false;
-                const hireDate = new Date(emp.hireDate.split('/').reverse().join('-'));
+                const hireDate = new Date(emp.hireDate.split("/").reverse().join("-"));
                 return hireDate >= dateRange.start && hireDate <= dateRange.end;
               });
               logger.info(`Filtered employees by date range: ${filteredEmployees.length} of ${formattedEmployees.length}`);
@@ -1797,19 +1959,19 @@ export default class ReportService extends BaseService<
             logger.info(`Returning ${filteredEmployees.length} formatted employees for report`);
             return filteredEmployees;
           } else {
-            logger.warn('No employees found in database, returning empty dataset');
+            logger.warn("No employees found in database, returning empty dataset");
             return [];
           }
         } catch (error) {
-          logger.error('Error getting employee data:', error);
+          logger.error("Error getting employee data:", error);
           return [];
         }
       }
 
-      case 'clients': {
+      case "clients": {
         // Use the built-in client list method from feedback session service
         try {
-          logger.info('Fetching real client data from feedback sessions');
+          logger.info("Fetching real client data from feedback sessions");
 
           // Get all clients - use a large limit to get all clients
           const { clients: feedbackClients, total } = await feedbackSessionService.getClientsList(1, 1000);
@@ -1818,15 +1980,15 @@ export default class ReportService extends BaseService<
 
           if (feedbackClients && feedbackClients.length > 0) {
             // Format the client data for the report with date filtering
-            let formattedClients = feedbackClients.map(client => {
+            let formattedClients = feedbackClients.map((client) => {
               // Format the last visit date
-              let lastVisit = '-';
+              let lastVisit = "-";
               let lastVisitDate = null;
 
               if (client.lastVisit) {
                 try {
                   const visitDate = new Date(client.lastVisit);
-                  lastVisit = visitDate.toLocaleDateString('fr-FR');
+                  lastVisit = visitDate.toLocaleDateString("fr-FR");
                   lastVisitDate = visitDate;
                 } catch (e) {
                   // Invalid date
@@ -1835,25 +1997,20 @@ export default class ReportService extends BaseService<
 
               // Create client object with all needed data
               return {
-                id: client.id || client.sessionId || '',
-                firstName: client.firstName || '-',
-                lastName: client.lastName || '-',
-                email: client.email || '-',
-                phone: client.phone || '-',
+                id: client.id || client.sessionId || "",
+                firstName: client.firstName || "-",
+                lastName: client.lastName || "-",
+                email: client.email || "-",
+                phone: client.phone || "-",
                 lastVisit,
-                _lastVisitDate: lastVisitDate // Temporary field for filtering
+                _lastVisitDate: lastVisitDate, // Temporary field for filtering
               };
             });
 
             // Filter out incomplete client records
-            formattedClients = formattedClients.filter(client => {
+            formattedClients = formattedClients.filter((client) => {
               // Check if all fields except lastVisit are empty/default
-              const hasOnlyLastVisit =
-                client.firstName === '-' &&
-                client.lastName === '-' &&
-                client.email === '-' &&
-                client.phone === '-' &&
-                client.lastVisit !== '-';
+              const hasOnlyLastVisit = client.firstName === "-" && client.lastName === "-" && client.email === "-" && client.phone === "-" && client.lastVisit !== "-";
 
               // Keep clients that have more than just lastVisit filled
               return !hasOnlyLastVisit;
@@ -1861,7 +2018,7 @@ export default class ReportService extends BaseService<
 
             // Apply date range filter if provided
             if (dateRange && dateRange.start && dateRange.end) {
-              formattedClients = formattedClients.filter(client => {
+              formattedClients = formattedClients.filter((client) => {
                 if (!client._lastVisitDate) return false;
                 return client._lastVisitDate >= dateRange.start && client._lastVisitDate <= dateRange.end;
               });
@@ -1874,21 +2031,21 @@ export default class ReportService extends BaseService<
             logger.info(`Returning ${finalClients.length} formatted clients for report`);
             return finalClients;
           } else {
-            logger.warn('No clients found in feedback sessions, returning empty dataset');
+            logger.warn("No clients found in feedback sessions, returning empty dataset");
             return [];
           }
         } catch (error) {
-          logger.error('Error getting client data from feedback sessions:', error);
+          logger.error("Error getting client data from feedback sessions:", error);
           return [];
         }
       }
 
-      case 'pharmacy-reviews': {
+      case "pharmacy-reviews": {
         // Try to get real feedback data
         try {
           // Use the getPharmacyRatings method instead of the non-existent getSessions method
-          const timeFilter = 'all'; // Default to all time periods
-          const ratingFilter = 'all'; // Default to all ratings
+          const timeFilter = "all"; // Default to all time periods
+          const ratingFilter = "all"; // Default to all ratings
 
           // Adjust time filter based on date range if provided
           let adjustedTimeFilter = timeFilter;
@@ -1897,13 +2054,13 @@ export default class ReportService extends BaseService<
             const diffDays = Math.floor((now.getTime() - dateRange.start.getTime()) / (1000 * 3600 * 24));
 
             if (diffDays <= 30) {
-              adjustedTimeFilter = '30days';
+              adjustedTimeFilter = "30days";
             } else if (diffDays <= 90) {
-              adjustedTimeFilter = 'quarter';
+              adjustedTimeFilter = "quarter";
             } else if (diffDays <= 180) {
-              adjustedTimeFilter = 'semester';
+              adjustedTimeFilter = "semester";
             } else if (diffDays <= 365) {
-              adjustedTimeFilter = 'year';
+              adjustedTimeFilter = "year";
             }
             // For custom date ranges outside the predefined filters, we'll still use 'all'
           }
@@ -1911,43 +2068,37 @@ export default class ReportService extends BaseService<
           const limit = 1000; // Get a large number of ratings to ensure comprehensive data
           const page = 1;
 
-          const { ratings, total } = await feedbackSessionService.getPharmacyRatings(
-            adjustedTimeFilter,
-            page,
-            limit,
-            ratingFilter,
-            sentimentFilter
-          );
+          const { ratings, total } = await feedbackSessionService.getPharmacyRatings(adjustedTimeFilter, page, limit, ratingFilter, sentimentFilter);
 
           if (ratings && ratings.length > 0) {
             // Format the ratings for the report
-            const formattedRatings = ratings.map(rating => {
+            const formattedRatings = ratings.map((rating) => {
               // Convert date if needed
-              let formattedDate = '';
+              let formattedDate = "";
               if (rating.date) {
                 try {
-                  formattedDate = new Date(rating.date).toLocaleDateString('fr-FR');
+                  formattedDate = new Date(rating.date).toLocaleDateString("fr-FR");
                 } catch (e) {
-                  formattedDate = '-';
+                  formattedDate = "-";
                 }
               }
 
               return {
-                id: rating.id || rating.sessionId || '',
+                id: rating.id || rating.sessionId || "",
                 date: formattedDate,
-                rating: rating.rating?.toString() || 'N/A',
-                comment: rating.comment || 'Aucun commentaire',
-                client: rating.client?.name || 'Client anonyme'
+                rating: rating.rating?.toString() || "N/A",
+                comment: rating.comment || "Aucun commentaire",
+                client: rating.client?.name || "Client anonyme",
               };
             });
 
             // Filter by date range if provided and if we couldn't use a predefined filter
             let filteredRatings = formattedRatings;
-            if (dateRange && adjustedTimeFilter === 'all') {
-              filteredRatings = formattedRatings.filter(rating => {
-                if (!rating.date || rating.date === '-') return false;
+            if (dateRange && adjustedTimeFilter === "all") {
+              filteredRatings = formattedRatings.filter((rating) => {
+                if (!rating.date || rating.date === "-") return false;
 
-                const ratingDate = new Date(rating.date.split('/').reverse().join('-'));
+                const ratingDate = new Date(rating.date.split("/").reverse().join("-"));
                 return ratingDate >= dateRange.start && ratingDate <= dateRange.end;
               });
 
@@ -1957,16 +2108,16 @@ export default class ReportService extends BaseService<
             return filteredRatings;
           }
 
-          logger.warn('No pharmacy reviews found, returning empty dataset');
+          logger.warn("No pharmacy reviews found, returning empty dataset");
           return [];
         } catch (error) {
-          logger.error('Error getting real feedback data:', error);
+          logger.error("Error getting real feedback data:", error);
           return [];
         }
       }
 
-      case 'employee-reviews':
-      case 'specific-employee-reviews': {
+      case "employee-reviews":
+      case "specific-employee-reviews": {
         // Try to get real employee review data
         try {
           // Use the getEmployeeRatings method instead of the non-existent getSessions method
@@ -1974,25 +2125,20 @@ export default class ReportService extends BaseService<
           const page = 1;
 
           // Use employee ID if this is a specific employee report
-          const targetEmployeeId = type === 'specific-employee-reviews' ? employeeId : undefined;
+          const targetEmployeeId = type === "specific-employee-reviews" ? employeeId : undefined;
 
-          const { ratings, total } = await feedbackSessionService.getEmployeeRatings(
-            targetEmployeeId,
-            page,
-            limit,
-            sentimentFilter
-          );
+          const { ratings, total } = await feedbackSessionService.getEmployeeRatings(targetEmployeeId, page, limit, sentimentFilter);
 
           if (ratings && ratings.length > 0) {
             // Format the ratings for the report
-            const formattedRatings = ratings.map(rating => {
+            const formattedRatings = ratings.map((rating) => {
               // Convert date if needed
-              let formattedDate = '';
+              let formattedDate = "";
               if (rating.date) {
                 try {
-                  formattedDate = new Date(rating.date).toLocaleDateString('fr-FR');
+                  formattedDate = new Date(rating.date).toLocaleDateString("fr-FR");
                 } catch (e) {
-                  formattedDate = '-';
+                  formattedDate = "-";
                 }
               }
 
@@ -2001,28 +2147,28 @@ export default class ReportService extends BaseService<
               if (rating.employeeName) {
                 employeeName = rating.employeeName;
               } else if (rating.employee) {
-                employeeName = `${rating.employee.lastName || ''} ${rating.employee.firstName || ''}`.trim();
+                employeeName = `${rating.employee.lastName || ""} ${rating.employee.firstName || ""}`.trim();
               } else {
-                employeeName = 'N/A';
+                employeeName = "N/A";
               }
 
               return {
-                id: rating.id || rating.sessionId || '',
+                id: rating.id || rating.sessionId || "",
                 employee: employeeName,
                 date: formattedDate,
-                rating: rating.rating?.toString() || 'N/A',
-                comment: rating.comment || 'Aucun commentaire',
-                client: rating.clientName || 'Client anonyme'
+                rating: rating.rating?.toString() || "N/A",
+                comment: rating.comment || "Aucun commentaire",
+                client: rating.clientName || "Client anonyme",
               };
             });
 
             // Filter by date range if provided
             let filteredRatings = formattedRatings;
             if (dateRange && dateRange.start && dateRange.end) {
-              filteredRatings = formattedRatings.filter(rating => {
-                if (!rating.date || rating.date === '-') return false;
+              filteredRatings = formattedRatings.filter((rating) => {
+                if (!rating.date || rating.date === "-") return false;
 
-                const ratingDate = new Date(rating.date.split('/').reverse().join('-'));
+                const ratingDate = new Date(rating.date.split("/").reverse().join("-"));
                 return ratingDate >= dateRange.start && ratingDate <= dateRange.end;
               });
 
@@ -2032,47 +2178,43 @@ export default class ReportService extends BaseService<
             return filteredRatings;
           }
 
-          logger.warn('No employee reviews found, returning empty dataset');
+          logger.warn("No employee reviews found, returning empty dataset");
           return [];
         } catch (error) {
-          logger.error('Error getting real employee review data:', error);
+          logger.error("Error getting real employee review data:", error);
           return [];
         }
       }
 
-      case 'suggestions': {
+      case "suggestions": {
         try {
-          logger.info('Fetching suggestions data for report');
+          logger.info("Fetching suggestions data for report");
 
           // Use our new getSuggestions method with a large limit to get all suggestions
           const limit = 1000; // Get a large number of suggestions
           const page = 1;
 
-          const { suggestions, total } = await feedbackSessionService.getSuggestions(
-            page,
-            limit,
-            dateRange
-          );
+          const { suggestions, total } = await feedbackSessionService.getSuggestions(page, limit, dateRange);
 
           if (suggestions && suggestions.length > 0) {
             // Format the suggestions for the report
-            const formattedSuggestions = suggestions.map(suggestion => {
+            const formattedSuggestions = suggestions.map((suggestion) => {
               // Convert date if needed
-              let formattedDate = '';
+              let formattedDate = "";
               if (suggestion.date) {
                 try {
-                  formattedDate = new Date(suggestion.date).toLocaleDateString('fr-FR');
+                  formattedDate = new Date(suggestion.date).toLocaleDateString("fr-FR");
                 } catch (e) {
-                  formattedDate = '-';
+                  formattedDate = "-";
                 }
               }
 
               return {
-                id: suggestion.id || suggestion.sessionId || '',
+                id: suggestion.id || suggestion.sessionId || "",
                 date: formattedDate,
-                text: suggestion.text || 'Aucune suggestion fournie',
-                client: suggestion.client || 'Client anonyme',
-                status: suggestion.status || 'Nouveau'
+                text: suggestion.text || "Aucune suggestion fournie",
+                client: suggestion.client || "Client anonyme",
+                status: suggestion.status || "Nouveau",
               };
             });
 
@@ -2080,10 +2222,10 @@ export default class ReportService extends BaseService<
             return formattedSuggestions;
           }
 
-          logger.warn('No suggestions found, returning empty dataset');
+          logger.warn("No suggestions found, returning empty dataset");
           return [];
         } catch (error) {
-          logger.error('Error getting suggestions data for report:', error);
+          logger.error("Error getting suggestions data for report:", error);
           return [];
         }
       }
@@ -2106,14 +2248,14 @@ export default class ReportService extends BaseService<
   }
 
   /**
- * Get a report by ID
- */
+   * Get a report by ID
+   */
   async getReportById(reportId: string) {
     try {
       const report = await this.model.findById(reportId);
       return report;
     } catch (error) {
-      logger.error('Error getting report by ID:', error);
+      logger.error("Error getting report by ID:", error);
       return null;
     }
   }
@@ -2128,28 +2270,28 @@ export default class ReportService extends BaseService<
         name: "Liste des employés",
         description: "Exportation complète des données des employés",
         iconType: "employees",
-        formats: ["PDF", "EXCEL"]
+        formats: ["PDF", "EXCEL"],
       },
       {
         id: "clients",
         name: "Liste des clients",
         description: "Exportation complète des données clients",
         iconType: "clients",
-        formats: ["PDF", "EXCEL"]
+        formats: ["PDF", "EXCEL"],
       },
       {
         id: "pharmacy-reviews",
         name: "Avis clients pour la pharmacie",
         description: "Tous les avis clients concernant la pharmacie",
         iconType: "pharmacy-reviews",
-        formats: ["PDF", "EXCEL"]
+        formats: ["PDF", "EXCEL"],
       },
       {
         id: "employee-reviews",
         name: "Avis clients pour tous les employés",
         description: "Tous les avis clients concernant les employés",
         iconType: "employee-reviews",
-        formats: ["PDF", "EXCEL"]
+        formats: ["PDF", "EXCEL"],
       },
       {
         id: "specific-employee-reviews",
@@ -2157,14 +2299,14 @@ export default class ReportService extends BaseService<
         description: "Avis clients pour un employé en particulier",
         iconType: "specific-employee-reviews",
         formats: ["PDF", "EXCEL"],
-        requiresEmployeeSelection: true
+        requiresEmployeeSelection: true,
       },
       {
         id: "suggestions",
         name: "Liste des suggestions des clients",
         description: "Toutes les suggestions faites par les clients",
         iconType: "suggestions",
-        formats: ["PDF", "EXCEL"]
+        formats: ["PDF", "EXCEL"],
       },
     ];
   }
@@ -2172,33 +2314,43 @@ export default class ReportService extends BaseService<
   /**
    * Get a formatted report name based on type and date range
    */
-  async getReportName(type: IReport['type'], employeeId?: string, dateRange?: { start: Date; end: Date }) {
+  async getReportName(type: IReport["type"], employeeId?: string, dateRange?: { start: Date; end: Date }) {
     const date = new Date();
-    const formattedDate = `${date.toLocaleString('fr-FR', { month: 'long' })} ${date.getFullYear()}`;
+    const formattedDate = `${date.toLocaleString("fr-FR", {
+      month: "long",
+    })} ${date.getFullYear()}`;
 
     // Format date range if provided
-    let dateRangePart = '';
+    let dateRangePart = "";
     if (dateRange && dateRange.start && dateRange.end) {
-      const start = dateRange.start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-      const end = dateRange.end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+      const start = dateRange.start.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+      const end = dateRange.end.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
       dateRangePart = ` (${start} - ${end})`;
     }
 
-    let name = '';
+    let name = "";
     switch (type) {
-      case 'employees':
+      case "employees":
         name = `Liste des employés${dateRangePart} - ${formattedDate}`;
         break;
-      case 'clients':
+      case "clients":
         name = `Liste des clients${dateRangePart} - ${formattedDate}`;
         break;
-      case 'pharmacy-reviews':
+      case "pharmacy-reviews":
         name = `Avis clients pour la pharmacie${dateRangePart} - ${formattedDate}`;
         break;
-      case 'employee-reviews':
+      case "employee-reviews":
         name = `Avis clients pour tous les employés${dateRangePart} - ${formattedDate}`;
         break;
-      case 'specific-employee-reviews':
+      case "specific-employee-reviews":
         // Fetch employee name to include in report title
         let employeeName = "";
         if (employeeId) {
@@ -2208,12 +2360,12 @@ export default class ReportService extends BaseService<
               employeeName = `${employee.lastName} ${employee.firstName}`;
             }
           } catch (err) {
-            logger.error('Error getting employee name for report title:', err);
+            logger.error("Error getting employee name for report title:", err);
           }
         }
         name = `Avis clients pour l'employé ${employeeName || employeeId || ""}${dateRangePart} - ${formattedDate}`;
         break;
-      case 'suggestions':
+      case "suggestions":
         name = `Suggestions des clients${dateRangePart} - ${formattedDate}`;
         break;
       default:
@@ -2231,11 +2383,7 @@ export default class ReportService extends BaseService<
     const dateRange = this.getDateRangeForPeriod(periodType);
 
     // Generate reports for different types
-    const reportTypes: IReport['type'][] = [
-      'employees',
-      'pharmacy-reviews',
-      'employee-reviews'
-    ];
+    const reportTypes: IReport["type"][] = ["employees", "pharmacy-reviews", "employee-reviews"];
 
     const reports = [];
 
@@ -2243,12 +2391,7 @@ export default class ReportService extends BaseService<
     const adminUserId = "655b37138a9d65c65c888888"; // Mock admin ID
 
     for (const type of reportTypes) {
-      const report = await this.generateReport(
-        type,
-        'PDF',
-        adminUserId,
-        dateRange
-      );
+      const report = await this.generateReport(type, "PDF", adminUserId, dateRange);
       reports.push(report);
     }
 
@@ -2264,31 +2407,31 @@ export default class ReportService extends BaseService<
     let end = new Date();
 
     switch (periodType) {
-      case 'current-month':
+      case "current-month":
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
-      case 'last-month':
+      case "last-month":
         start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         end = new Date(now.getFullYear(), now.getMonth(), 0);
         break;
-      case 'current-quarter':
+      case "current-quarter":
         const currentQuarter = Math.floor(now.getMonth() / 3);
         start = new Date(now.getFullYear(), currentQuarter * 3, 1);
         end = new Date(now.getFullYear(), (currentQuarter + 1) * 3, 0);
         break;
-      case 'last-quarter':
+      case "last-quarter":
         const lastQuarter = Math.floor(now.getMonth() / 3) - 1;
         const year = lastQuarter < 0 ? now.getFullYear() - 1 : now.getFullYear();
         const quarter = lastQuarter < 0 ? 3 : lastQuarter;
         start = new Date(year, quarter * 3, 1);
         end = new Date(year, (quarter + 1) * 3, 0);
         break;
-      case 'current-year':
+      case "current-year":
         start = new Date(now.getFullYear(), 0, 1);
         end = new Date(now.getFullYear(), 11, 31);
         break;
-      case 'last-year':
+      case "last-year":
         start = new Date(now.getFullYear() - 1, 0, 1);
         end = new Date(now.getFullYear() - 1, 11, 31);
         break;
@@ -2300,7 +2443,531 @@ export default class ReportService extends BaseService<
 
     return { start, end };
   }
+
+  /**
+   * Helper method to check if we need a new page
+   */
+  private needsNewPage(doc: PDFKit.PDFDocument, requiredSpace: number = 100): boolean {
+    const bottomMargin = 20; // Leave space for footer
+    return doc.y + requiredSpace > doc.page.height - bottomMargin;
+  }
+
+  /**
+   * Helper to create a new page with header
+   */
+  private addNewPageWithHeader(doc: PDFKit.PDFDocument, reportName: string, colors: any, fonts: any, dateRange?: { start: Date; end: Date }): void {
+    doc.addPage();
+    this.addHeader(doc, reportName, colors, fonts, dateRange);
+    doc.y = 100; // Start content below header
+  }
+
+  /**
+   * Enhanced addDataTable with proper pagination
+   */
+  private addDataTable(doc: PDFKit.PDFDocument, data: any[], type: IReport["type"], colors: any, fonts: any, reportName?: string, dateRange?: { start: Date; end: Date }): void {
+    // Get headings for the table
+    const headings = this.getReportHeadings(type);
+    const colCount = headings.length;
+
+    // Log data being rendered
+    logger.info(`Rendering ${data.length} rows for ${type} report with pagination support`);
+
+    // Calculate table position
+    let yPos = doc.y || 200;
+    const xPos = 50;
+    const tableWidth = 500;
+    let colWidths: number[] = [];
+
+    // Set specific column widths based on content type
+    switch (type) {
+      case "employees":
+        colWidths = [100, 100, 140, 80, 80];
+        break;
+      case "clients":
+        colWidths = [100, 100, 120, 80, 100];
+        break;
+      case "pharmacy-reviews":
+        colWidths = [80, 50, 280, 90];
+        break;
+      case "employee-reviews":
+      case "specific-employee-reviews":
+        colWidths = [100, 80, 50, 180, 90];
+        break;
+      case "suggestions":
+        colWidths = [80, 280, 90, 50];
+        break;
+      default:
+        colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
+    }
+
+    // Adjust if needed
+    if (colWidths.length !== colCount) {
+      colWidths = Array(colCount).fill(Math.floor(tableWidth / colCount));
+    }
+
+    doc.moveDown(0.5);
+    yPos = doc.y;
+
+    // Helper function to draw table header
+    const drawTableHeader = (currentY: number): number => {
+      // Draw header background
+      doc.rect(xPos, currentY, tableWidth, 36).fill(colors.tableHeader);
+      doc.rect(xPos, currentY, tableWidth, 2).fill(colors.accent);
+
+      // Draw headers
+      doc.fillColor("white").fontSize(10).font(fonts.bold);
+      headings.forEach((heading, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(heading, xOffset + 5, currentY + 13, {
+          width: colWidths[i] - 10,
+          align: "center",
+        });
+      });
+
+      return currentY + 36;
+    };
+
+    // Draw initial header
+    yPos = drawTableHeader(yPos);
+
+    // Check for empty data
+    if (data.length === 0) {
+      doc.moveDown(2);
+      doc.fontSize(12).font(fonts.italic).fillColor(colors.lightText).text("Aucune donnée disponible pour ce rapport.", { align: "center" });
+      return;
+    }
+
+    // Draw table rows with pagination
+    doc.font(fonts.body).fontSize(9).fillColor(colors.text);
+
+    data.forEach((row, rowIndex) => {
+      const rowData = this.formatRowData(row, type);
+
+      // Calculate required row height
+      let rowHeight = 28;
+      const maxContentHeight = rowData.map((cell, i) => {
+        const cellText = String(cell || "");
+        const cellWidth = colWidths[i] - 14;
+        const linesEstimate = Math.ceil(cellText.length / (cellWidth / 4.5));
+        const textHeight = linesEstimate * 12;
+        return Math.max(textHeight, 24);
+      });
+      rowHeight = Math.max(...maxContentHeight, rowHeight);
+
+      // Check if we need a new page
+      if (this.needsNewPage(doc, rowHeight + 50)) {
+        this.addNewPageWithHeader(doc, reportName || "Rapport", colors, fonts, dateRange);
+        yPos = 100;
+        doc.y = yPos;
+
+        // Redraw header on new page
+        yPos = drawTableHeader(yPos);
+      }
+
+      // Draw row background
+      const backgroundColor = rowIndex % 2 === 0 ? "white" : colors.tableStripe;
+      doc.rect(xPos, yPos, tableWidth, rowHeight).fill(backgroundColor);
+
+      // Draw cell data
+      doc.fillColor(colors.text);
+      rowData.forEach((cell, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+
+        const cellText = String(cell || "");
+        let align: "left" | "center" | "right" = "left";
+
+        if (cellText.length < 5 || /^\d+(\.\d+)?$/.test(cellText) || (i === 2 && (type === "pharmacy-reviews" || type === "employee-reviews"))) {
+          align = "center";
+        }
+
+        // Special handling for status column
+        if (type === "suggestions" && i === 3) {
+          align = "center";
+          const statusBgColor = cellText === "Traité" ? colors.success : colors.accent;
+          const cellCenter = xOffset + colWidths[i] / 2;
+          const badgeWidth = 60;
+
+          doc.roundedRect(cellCenter - badgeWidth / 2, yPos + rowHeight / 2 - 8, badgeWidth, 16, 8).fill(statusBgColor);
+
+          doc.fillColor("white").text(cellText, xOffset + 5, yPos + rowHeight / 2 - 4, {
+            width: colWidths[i] - 10,
+            align: "center",
+          });
+
+          doc.fillColor(colors.text);
+          return;
+        }
+
+        doc.text(cellText, xOffset + 7, yPos + 7, {
+          width: colWidths[i] - 14,
+          align,
+          lineBreak: true,
+          height: rowHeight - 14,
+        });
+      });
+
+      // Draw borders
+      doc.lineWidth(0.2).strokeColor(colors.border);
+      doc
+        .moveTo(xPos, yPos + rowHeight)
+        .lineTo(xPos + tableWidth, yPos + rowHeight)
+        .stroke();
+
+      let xLine = xPos;
+      for (let i = 1; i < colCount; i++) {
+        xLine += colWidths[i - 1];
+        doc
+          .moveTo(xLine, yPos)
+          .lineTo(xLine, yPos + rowHeight)
+          .stroke();
+      }
+
+      yPos += rowHeight;
+    });
+
+    doc.y = yPos + 20;
+  }
+
+  /**
+   * Draw employee summary section with statistics
+   */
+  private drawEmployeeSummary(doc: PDFKit.PDFDocument, employeeName: string, employeeReviews: any[], yPos: number, colors: any, fonts: any): number {
+    // Calculate statistics for this employee
+    const avgRating = this.calculateAverageRating(employeeReviews);
+    const totalReviews = employeeReviews.length;
+    const negativeReviews = this.getNegativeReviews(employeeReviews);
+    const negativeCount = negativeReviews.length;
+    const commentsCount = employeeReviews.filter((item) => item.comment && item.comment !== "Aucun commentaire").length;
+
+    // Get rating distribution
+    const ratingDistribution = [0, 0, 0, 0, 0]; // 1-5 stars
+    employeeReviews.forEach((review) => {
+      const rating = parseInt(review.rating);
+      if (rating >= 1 && rating <= 5) {
+        ratingDistribution[rating - 1]++;
+      }
+    });
+
+    // Draw employee name header
+    doc.fontSize(14).font(fonts.bold).fillColor(colors.primary).text(employeeName, 50, yPos);
+
+    yPos += 25;
+
+    // Draw summary container with border
+    const summaryWidth = 500;
+    const summaryHeight = 60;
+    doc.roundedRect(50, yPos, summaryWidth, summaryHeight, 5).lineWidth(1).stroke(colors.border);
+
+    // Add subtle background
+    doc.rect(50, yPos, summaryWidth, summaryHeight).fill("#F8F9FA");
+
+    // Create 4-column layout for stats
+    const colWidth = summaryWidth / 4;
+    const stats = [
+      {
+        label: "Total avis",
+        value: totalReviews.toString(),
+        color: colors.primary,
+      },
+      {
+        label: "Note moyenne",
+        value: `${avgRating}/5`,
+        color: parseFloat(avgRating) >= 4 ? colors.success : parseFloat(avgRating) >= 3 ? colors.warning : colors.error,
+      },
+      {
+        label: "Avis négatifs",
+        value: `${negativeCount} (${Math.round((negativeCount / totalReviews) * 100)}%)`,
+        color: colors.error,
+      },
+      {
+        label: "Avec commentaires",
+        value: `${commentsCount}/${totalReviews}`,
+        color: colors.accent,
+      },
+    ];
+
+    stats.forEach((stat, index) => {
+      const x = 50 + index * colWidth;
+      this.drawSummaryStat(doc, x + 10, yPos + 15, stat.label, stat.value, stat.color, fonts);
+    });
+
+    // Add rating distribution bar chart
+    yPos += summaryHeight + 15;
+
+    doc.fontSize(10).font(fonts.bold).fillColor(colors.text).text("Répartition des notes:", 50, yPos);
+
+    yPos += 15;
+
+    const barWidth = 80;
+    const maxCount = Math.max(...ratingDistribution);
+
+    ratingDistribution.forEach((count, index) => {
+      const x = 50 + index * (barWidth + 10);
+
+      // Draw star rating label
+      doc
+        .fontSize(9)
+        .font(fonts.body)
+        .fillColor(colors.text)
+        .text(`${index + 1} étoile` + (index + 1 === 1 ? " :" : "s :"), x, yPos + 5);
+
+      // Draw count
+      doc
+        .fontSize(9)
+        .font(fonts.bold)
+        .fillColor(index + 1 >= 3 ? colors.success : index + 1 >= 2 ? colors.warning : colors.error)
+        .text(count.toString(), x + 37, yPos + 5);
+    });
+
+    return yPos + 40; // Return new Y position
+  }
+
+  /**
+   * Draw negative reviews table for an employee with pagination
+   */
+  private drawNegativeReviewsTable(
+    doc: PDFKit.PDFDocument,
+    employeeName: string,
+    negativeReviews: any[],
+    yPos: number,
+    colors: any,
+    fonts: any,
+    reportName?: string,
+    dateRange?: { start: Date; end: Date }
+  ): number {
+    if (negativeReviews.length === 0) {
+      doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText).text("Aucun avis négatif trouvé pour cet employé.", 50, yPos);
+      return yPos + 20;
+    }
+
+    // Draw section title
+    doc.fontSize(12).font(fonts.bold).fillColor(colors.text).text(`Avis négatifs - ${employeeName} (${negativeReviews.length})`, 50, yPos);
+
+    yPos += 20;
+
+    // Table setup
+    const tableWidth = 500;
+    const colWidths = [80, 60, 60, 300];
+    const xPos = 50;
+    const headerHeight = 30;
+    const rowHeight = 25;
+    const headers = ["Date", "Note", "Client", "Commentaire"];
+
+    // Helper to draw table header
+    const drawHeader = (currentY: number): number => {
+      doc.rect(xPos, currentY, tableWidth, headerHeight).fill(colors.primary);
+
+      doc.fillColor("white").fontSize(10).font(fonts.bold);
+      headers.forEach((header, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(header, xOffset + 5, currentY + 10, {
+          width: colWidths[i] - 10,
+          align: "center",
+        });
+      });
+
+      return currentY + headerHeight;
+    };
+
+    // Draw initial header
+    yPos = drawHeader(yPos);
+
+    // Draw table rows with pagination
+    negativeReviews.forEach((review, index) => {
+      // Check if we need a new page
+      if (this.needsNewPage(doc, rowHeight + 50)) {
+        this.addNewPageWithHeader(doc, reportName || "Rapport", colors, fonts, dateRange);
+        yPos = 100;
+
+        // Redraw section context
+        doc.fontSize(12).font(fonts.bold).fillColor(colors.primary).text(`Avis négatifs - ${employeeName} (suite)`, 60, yPos);
+        yPos += 25;
+
+        // Redraw header
+        yPos = drawHeader(yPos);
+      }
+
+      // Alternate row colors
+      if (index % 2 === 0) {
+        doc.rect(xPos, yPos, tableWidth, rowHeight).fill("#FEF2F2");
+      }
+
+      // Draw borders
+      doc.rect(xPos, yPos, tableWidth, rowHeight).lineWidth(0.5).stroke(colors.border);
+
+      // Format row data
+      const rowData = [
+        review.date || "-",
+        review.rating || "-",
+        review.client || "Client anonyme",
+        review.comment && review.comment.length > 80 ? `${review.comment.substring(0, 77)}...` : review.comment || "-",
+      ];
+
+      // Draw cell content
+      doc.fontSize(9).font(fonts.body).fillColor(colors.text);
+      rowData.forEach((cell, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(cell, xOffset + 5, yPos + 5, {
+          width: colWidths[i] - 10,
+          align: "center",
+        });
+      });
+
+      // Draw horizontal divider
+      doc.lineWidth(0.2).strokeColor(colors.border);
+      doc
+        .moveTo(xPos, yPos + rowHeight)
+        .lineTo(xPos + tableWidth, yPos + rowHeight)
+        .stroke();
+
+      // Draw column separators
+      let xLine = xPos;
+      for (let i = 1; i < 4; i++) {
+        xLine += colWidths[i - 1];
+        doc
+          .moveTo(xLine, yPos)
+          .lineTo(xLine, yPos + rowHeight)
+          .stroke();
+      }
+
+      yPos += rowHeight;
+    });
+
+    return yPos + 10;
+  }
+
+  /**
+   * Draw positive reviews table for an employee with pagination
+   */
+  private drawPositiveReviewsTable(
+    doc: PDFKit.PDFDocument,
+    employeeName: string,
+    positiveReviews: any[],
+    yPos: number,
+    colors: any,
+    fonts: any,
+    reportName?: string,
+    dateRange?: { start: Date; end: Date }
+  ): number {
+    if (positiveReviews.length === 0) {
+      doc.fontSize(11).font(fonts.italic).fillColor(colors.lightText).text("Aucun avis positif trouvé pour cet employé.", 50, yPos);
+      return yPos + 20;
+    }
+
+    // Draw section title
+    doc.fontSize(12).font(fonts.bold).fillColor(colors.text).text(`Avis positifs - ${employeeName} (${positiveReviews.length})`, 50, yPos);
+
+    yPos += 20;
+
+    // Table setup
+    const tableWidth = 500;
+    const colWidths = [80, 60, 60, 300];
+    const xPos = 50;
+    const headerHeight = 30;
+    const rowHeight = 25;
+    const headers = ["Date", "Note", "Client", "Commentaire"];
+
+    // Helper to draw table header
+    const drawHeader = (currentY: number): number => {
+      doc.rect(xPos, currentY, tableWidth, headerHeight).fill(colors.primary);
+
+      doc.fillColor("white").fontSize(10).font(fonts.bold);
+      headers.forEach((header, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(header, xOffset + 5, currentY + 10, {
+          width: colWidths[i] - 10,
+          align: "center",
+        });
+      });
+
+      return currentY + headerHeight;
+    };
+
+    // Draw initial header
+    yPos = drawHeader(yPos);
+
+    // Draw table rows with pagination
+    positiveReviews.forEach((review, index) => {
+      // Check if we need a new page
+      if (this.needsNewPage(doc, rowHeight + 50)) {
+        this.addNewPageWithHeader(doc, reportName || "Rapport", colors, fonts, dateRange);
+        yPos = 100;
+
+        // Redraw section context
+        doc.fontSize(12).font(fonts.bold).fillColor(colors.primary).text(`Avis positifs - ${employeeName} (${positiveReviews.length}) (Suite)`, 60, yPos);
+        yPos += 25;
+
+        // Redraw header
+        yPos = drawHeader(yPos);
+      }
+
+      // Alternate row colors
+      if (index % 2 === 0) {
+        doc.rect(xPos, yPos, tableWidth, rowHeight).fill("#F0FDF4");
+      }
+
+      // Draw borders
+      doc.rect(xPos, yPos, tableWidth, rowHeight).lineWidth(0.5).stroke(colors.border);
+
+      // Format row data
+      const rowData = [
+        review.date || "-",
+        review.rating || "-",
+        review.client || "Client anonyme",
+        review.comment && review.comment.length > 80 ? `${review.comment.substring(0, 77)}...` : review.comment || "-",
+      ];
+
+      // Draw cell content
+      doc.fontSize(9).font(fonts.body).fillColor(colors.text);
+      rowData.forEach((cell, i) => {
+        let xOffset = xPos;
+        for (let j = 0; j < i; j++) {
+          xOffset += colWidths[j];
+        }
+        doc.text(cell, xOffset + 5, yPos + 5, {
+          width: colWidths[i] - 10,
+          align: "center",
+        });
+      });
+
+      // Draw horizontal divider
+      doc.lineWidth(0.2).strokeColor(colors.border);
+      doc
+        .moveTo(xPos, yPos + rowHeight)
+        .lineTo(xPos + tableWidth, yPos + rowHeight)
+        .stroke();
+
+      // Draw column separators
+      let xLine = xPos;
+      for (let i = 1; i < 4; i++) {
+        xLine += colWidths[i - 1];
+        doc
+          .moveTo(xLine, yPos)
+          .lineTo(xLine, yPos + rowHeight)
+          .stroke();
+      }
+
+      yPos += rowHeight;
+    });
+
+    return yPos + 10;
+  }
 }
 
 // Export singleton instance
-export const reportService = ReportService.getInstance(); 
+export const reportService = ReportService.getInstance();
