@@ -510,7 +510,7 @@ export default function PharmacyRatingsPage({ loaderData }: Route.ComponentProps
                   </TableHeader>
                   <TableBody>
                     {ratings.length > 0 ? (
-                      ratings.map(rating => (
+                      ratings.map((rating: any) => (
                         <TableRow key={rating.id}>
                           <TableCell className="text-xs sm:text-sm font-medium">{rating.client.name}</TableCell>
                           <TableCell>
