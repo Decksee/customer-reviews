@@ -144,7 +144,7 @@ const EmployeeCardExpanded = ({
             onClick={onClick}
             className="cursor-pointer relative rounded-2xl overflow-hidden shadow-sm hover:shadow-sm transition-all duration-300"
           >
-            <Avatar className="w-[200px] h-[240px] rounded-2xl">
+            <Avatar className="w-[140px] h-[180px] lg:w-[200px] lg:h-[240px] rounded-2xl">
               {employee.avatar ? (
                 <img
                   src={employee.avatar}
@@ -696,7 +696,7 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
 
   return (
     <motion.div
-      className="min-h-screen max-h-screen overflow-hidden relative"
+      className="h-screen w-screen overflow-hidden relative bg-slate-50"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -717,7 +717,7 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
         </Link>
       </div>
 
-      <div className="w-full h-screen px-8 py-3 flex flex-col relative z-10 overflow-hidden">
+      <div className="w-full h-full px-4 py-2 flex flex-col relative z-10 overflow-hidden">
         <style>{`
           .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -754,27 +754,27 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
           }
         `}</style>
 
-        <div className="bg-transparent pb-6 px-8 mb-5">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/images/logo-2.svg" className="w-[180px] h-[84px]" alt="" />
+        <div className="bg-transparent pb-2 px-4 mb-2 shrink-0">
+          <div className="flex items-center justify-center gap-3 mb-1">
+            <img src="/images/logo-2.svg" className="w-[120px] h-[56px] object-contain" alt="" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900">
+          <h2 className="text-xl md:text-2xl font-bold text-center text-gray-900">
             Aidez-nous à améliorer nos services
           </h2>
         </div>
 
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6 flex-1 min-h-0">
             <motion.div variants={itemVariants} className="flex flex-col min-h-0">
-              <Card className="h-full p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[50px] overflow-hidden">
-                <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
-                  <h1 className="text-2xl font-bold text-center">Et vous, quelle est votre retour d’expérience dans notre pharmacie ?</h1>
+              <Card className="h-full p-3 lg:p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[30px] lg:rounded-[50px] overflow-hidden">
+                <CardHeader className="pb-1 pt-1 px-2 flex-shrink-0">
+                  <h1 className="text-lg lg:text-2xl font-bold text-center">Et vous, quelle est votre retour d’expérience dans notre pharmacie ?</h1>
                 </CardHeader>
                 <CardContent className="px-3 py-1 flex-1 flex flex-col min-h-0">
-                  <div className="flex justify-center my-2 px-2 flex-shrink-0">
+                  <div className="flex justify-center my-1 lg:my-2 px-2 flex-shrink-0">
                     <video
                       src="/images/rh.mp4"
-                      className="w-full max-w-md max-h-[150px] rounded-lg object-cover"
+                      className="w-full max-w-md max-h-[100px] lg:max-h-[150px] rounded-lg object-cover"
                       autoPlay
                       muted
                       loop
@@ -783,8 +783,8 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
                       <track kind="captions" />
                     </video>
                   </div>
-                  <h1 className="text-[20px] text-center mt-5 font-bold px-5">Sélectionnez l'emoji qui représente votre niveau de satisfaction</h1>
-                  <div className="flex justify-center mt-8 mb-5  flex-shrink-0">
+                  <h1 className="text-[16px] lg:text-[20px] text-center mt-2 lg:mt-5 font-bold px-2 lg:px-5">Sélectionnez l'emoji qui représente votre niveau de satisfaction</h1>
+                  <div className="flex justify-center mt-2 lg:mt-4 mb-2 lg:mb-5 flex-shrink-0">
                     <EmojiRating
                       onChange={handlePharmacyRatingChange}
                       initialValue={feedbackData.pharmacyRating}
@@ -795,9 +795,9 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
             </motion.div>
 
             <motion.div variants={itemVariants} className="flex flex-col min-h-0">
-              <Card className="h-full p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[40px] overflow-hidden">
-                <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
-                  <h1 className="text-3xl font-bold text-center">Notre personnel</h1>
+              <Card className="h-full p-3 lg:p-6 border-0 bg-[#FFFFFF40] backdrop-blur-sm dark:bg-gray-800/95 transition-all duration-300 flex flex-col dark:border-[#1c7b80] rounded-[30px] lg:rounded-[40px] overflow-hidden">
+                <CardHeader className="pb-1 pt-1 px-2 flex-shrink-0">
+                  <h1 className="text-xl lg:text-3xl font-bold text-center">Notre personnel</h1>
                   <h1 className="text-[16px] text-center">Qu’avez-vous pensez du personnel qui vous a reçu ? Donnez une note et sélectionnez vos impressions à chaque personne avec qui vous avez interagit.</h1>
                 </CardHeader>
                 <div className="relative w-[95%] mx-auto mb-1">
@@ -883,7 +883,7 @@ export default function FeedbackStart({ loaderData }: Route.ComponentProps) {
             </motion.div>
           </div>
 
-          <div className="flex justify-center items-center mt-13 mb-5 flex-shrink-0">
+          <div className="flex justify-center items-center mt-2 lg:mt-6 mb-2 flex-shrink-0">
             <motion.div variants={itemVariants}>
               <Button
                 type="button"

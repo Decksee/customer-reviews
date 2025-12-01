@@ -364,7 +364,7 @@ const EmojiRating = ({ onChange, initialValue }: { onChange: (rating: number) =>
 
                                 console.log(`Selected pharmacy rating: ${newValue}`);
                             }}
-                            className={`relative w-16 h-16 md:w-20 md:h-20 lg:w-18 lg:h-18 xl:w-22 xl:h-22 rounded-full overflow-hidden ${isSelected
+                            className={`relative w-12 h-12 md:w-14 md:h-14 lg:w-18 lg:h-18 xl:w-22 xl:h-22 rounded-full overflow-hidden ${isSelected
                                 ? `ring-4 ring-offset-4 ${item.ringColor} ${item.shadowColor} shadow-2xl`
                                 : isAnimating
                                     ? `ring-2 ring-offset-2 ${item.ringColor} ${item.shadowColor} shadow-xl`
